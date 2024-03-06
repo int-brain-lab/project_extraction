@@ -10,6 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      with:
+        ref: ${{ github.head_ref }}
+        fetch-depth: 0
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
@@ -19,12 +22,17 @@ jobs:
     - name: Install dependencies
       run: |
         pip install --editable .
-        pip install packaging
     - name: Fetch version
       run: |
         latest_version=$(pip show project_extraction | awk '/^Version: / {sub("^Version: ", ""); print}')
         echo "LATEST_VERSION=$latest_version" >> $GITHUB_ENV
-    - name: Push tag
+    - name: Create tag
       run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
         git tag -a "$LATEST_VERSION" HEAD -m "Version v$LATEST_VERSION"
-        git push origin "$LATEST_VERSION"
+    - name: Push changes
+      uses: ad-m/github-push-action@master
+      with:
+        force: true
+        tags: true
