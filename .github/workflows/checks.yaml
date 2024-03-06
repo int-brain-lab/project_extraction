@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  deploy:
+  checks:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -35,7 +35,3 @@ jobs:
         import sys; from packaging import version
         sys.exit(int(version.parse("$PREVIOUS_VERSION") >= version.parse("$LATEST_VERSION")))
         EOP
-    - name: Push tag
-      run: |
-        git tag -a "$LATEST_VERSION" HEAD -m "Version v$LATEST_VERSION"
-        git push origin "$LATEST_VERSION"
