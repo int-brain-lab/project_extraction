@@ -6,3 +6,4 @@
   - error
   - reward
 'PROBABILITY_OPTO_STIM': 0.2  # probability of optogenetic stimulation
+'NUM_OPTO_COND': 52  # the number (N) of preset conditions to draw from, where N > x > 0
