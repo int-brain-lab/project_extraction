@@ -7,9 +7,11 @@ for each trial
 Additionally the state machine is modified to add output TTLs for optogenetic stimulation
 """
 import logging
-import time
+import sys
+from argparse import ArgumentTypeError
 from pathlib import Path
 from typing import Literal
+import warnings
 
 import numpy as np
 import yaml
@@ -20,14 +22,18 @@ from pybpodapi.protocol import StateMachine
 from importlib import reload
 import random
 
-import sys
-sys.path.append('C:\zapit-tcp-bridge\python')
-import Python_TCP_Utils as ptu
-from TCPclient import TCPclient
+ZAPIT_PYTHON = r'C:\zapit-tcp-bridge\python'
 
-num_cond = 52 #will need to change later - is there a function to automatically detect this?>
+try:
+    assert Path(ZAPIT_PYTHON).exists()
+    sys.path.append(ZAPIT_PYTHON)
+    import Python_TCP_Utils as ptu
+    from TCPclient import TCPclient
+except (AssertionError, ModuleNotFoundError):
+    warnings.warn(
+        'Please clone https://github.com/Zapit-Optostim/zapit-tcp-bridge to '
+        f'{Path(ZAPIT_PYTHON).parents[1]}', RuntimeWarning)
 
-stim_location_history = []
 
 log = logging.getLogger('iblrig.task')
 
@@ -74,9 +80,6 @@ class Session(BiasedChoiceWorldSession):
     protocol_name = 'nate_optoBiasedChoiceWorld'
     extractor_tasks = ['TrialRegisterRaw', 'ChoiceWorldTrials', 'TrainingStatus']
 
-    
-    
-
     def __init__(
         self,
         *args,
@@ -98,13 +101,23 @@ class Session(BiasedChoiceWorldSession):
             p=[1 - probability_opto_stim, probability_opto_stim],
             size=NTRIALS_INIT,
         ).astype(bool)
+        self.trials_table['laser_location_idx'] = np.zeros(NTRIALS_INIT, dtype=int)
+
+    def draw_next_trial_info(self, **kwargs):
+        """Draw next trial variables.
+
+        This is called by the `next_trial` method before updating the Bpod state machine. This
+        subclass method generates the stimulation index which is sent to Zapit when arming the
+        laser on stimulation trials.
+        """
+        if self.trials_table.at[self.trial_num, 'opto_stimulation']:
+            N = int(self.task_params.get('NUM_OPTO_COND', 52))
+            self.trials_table.at[self.trial_num, 'laser_location_idx'] = random.randrange(1, N)
 
     def start_hardware(self):
-        
-        
         self.client = TCPclient(tcp_port=1488, tcp_ip='127.0.0.1')
 
-        self.client.close() # need to ensure is closed first; currently nowhere that this is defined at end of task!
+        self.client.close()  # need to ensure is closed first; currently nowhere that this is defined at end of task!
         self.client.connect()
         super().start_hardware()
         # add the softcodes for the zapit opto stimulation
@@ -112,44 +125,46 @@ class Session(BiasedChoiceWorldSession):
         soft_code_dict.update({SOFTCODE_STOP_ZAPIT: self.zapit_stop_laser})
         soft_code_dict.update({SOFTCODE_FIRE_ZAPIT: self.zapit_fire_laser})
         self.bpod.register_softcodes(soft_code_dict)
-        
 
     def zapit_arm_laser(self):
         log.warning('Arming laser')
-        #this is where you define the laser stim (i.e., arm the laser)
+        # this is where you define the laser stim (i.e., arm the laser)
 
-        self.current_location_idx = random.randrange(1,int(num_cond))
+        current_location_idx = self.trials_table.at[self.trial_num, 'laser_location_idx']
 
         #hZP.send_samples(
         #    conditionNum=current_location_idx, hardwareTriggered=True, logging=True
         #)
 
-        zapit_byte_tuple, zapit_int_tuple = ptu.gen_Zapit_byte_tuple(trial_state_command = 1,
-                    arg_keys_dict = {'conditionNum_channel': True, 'laser_channel': True, 
-                                    'hardwareTriggered_channel': True, 'logging_channel': False, 
-                                    'verbose_channel': False},
-                    arg_values_dict = {'conditionNum': self.current_location_idx, 'laser_ON': True, 
-                                        'hardwareTriggered_ON': True, 'logging_ON': False, 
-                                        'verbose_ON': False})
+        zapit_byte_tuple, zapit_int_tuple = ptu.gen_Zapit_byte_tuple(
+            trial_state_command=1,
+            arg_keys_dict={'conditionNum_channel': True, 'laser_channel': True,
+                           'hardwareTriggered_channel': True, 'logging_channel': False,
+                           'verbose_channel': False},
+            arg_values_dict={'conditionNum': current_location_idx, 'laser_ON': True,
+                             'hardwareTriggered_ON': True, 'logging_ON': False,
+                             'verbose_ON': False}
+        )
         response = self.client.send_receive(zapit_byte_tuple)
         log.warning(response)
-        stim_location_history.append(self.current_location_idx)
 
     def zapit_fire_laser(self):
         # just logging - actual firing will be triggered by the state machine via TTL
-        #this really only triggers a ttl and sends a log entry - no need to plug in code here
+        # this really only triggers a ttl and sends a log entry - no need to plug in code here
         log.warning('Firing laser')
-
 
     def zapit_stop_laser(self):
         log.warning('Stopping laser')
-        zapit_byte_tuple, zapit_int_tuple = ptu.gen_Zapit_byte_tuple(trial_state_command = 0,
-                    arg_keys_dict = {'conditionNum_channel': True, 'laser_channel': True, 
-                                    'hardwareTriggered_channel': True, 'logging_channel': False, 
-                                    'verbose_channel': False},
-                    arg_values_dict = {'conditionNum': self.current_location_idx, 'laser_ON': True, 
-                                        'hardwareTriggered_ON': False, 'logging_ON': False, 
-                                        'verbose_ON': False})
+        current_location_idx = self.trials_table.at[self.trial_num, 'laser_location_idx']
+        zapit_byte_tuple, zapit_int_tuple = ptu.gen_Zapit_byte_tuple(
+            trial_state_command=0,
+            arg_keys_dict={'conditionNum_channel': True, 'laser_channel': True,
+                           'hardwareTriggered_channel': True, 'logging_channel': False,
+                           'verbose_channel': False},
+            arg_values_dict={'conditionNum': current_location_idx, 'laser_ON': True,
+                             'hardwareTriggered_ON': False, 'logging_ON': False,
+                             'verbose_ON': False}
+        )
         response = self.client.send_receive(zapit_byte_tuple)
 
     def _instantiate_state_machine(self, trial_number=None):
@@ -172,6 +187,11 @@ class Session(BiasedChoiceWorldSession):
     @staticmethod
     def extra_parser():
         """:return: argparse.parser()"""
+        def positive_int(value):
+            if (value := int(value)) <= 0:
+                raise ArgumentTypeError(f'"{value}" is an invalid positive int value')
+            return value
+
         parser = super(Session, Session).extra_parser()
         parser.add_argument(
             '--probability_opto_stim',
@@ -207,6 +227,12 @@ class Session(BiasedChoiceWorldSession):
             nargs='+',
             type=str,
             help='list of the state machine states where opto stim should be stopped',
+        )
+        parser.add_argument(
+            '--n_opto_cond',
+            default=DEFAULTS['NUM_OPTO_COND'],
+            type=positive_int,
+            help='the number (N) of preset conditions to draw from, where N > x > 0',
         )
         return parser
 
