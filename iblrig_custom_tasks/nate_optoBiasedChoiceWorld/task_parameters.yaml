@@ -5,5 +5,20 @@
   - no_go
   - error
   - reward
+'MASK_TTL_STATES': # list of the state machine states where mask stim should be delivered
+  - trial_start
+  - delay_initiation
+  - reset_rotary_encoder
+  - quiescent_period
+  - stim_on
+  - interactive_delay
+  - play_tone
+  - reset2_rotary_encoder
+  - closed_loop
+  - no_go
+  - freeze_error
+  - error
+  - freeze_reward
+  - reward
 'PROBABILITY_OPTO_STIM': 0.2  # probability of optogenetic stimulation
 'NUM_OPTO_COND': 52  # the number (N) of preset conditions to draw from, where N > x > 0

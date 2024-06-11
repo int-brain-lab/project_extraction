@@ -6,9 +6,12 @@ for each trial
 
 Additionally the state machine is modified to add output TTLs for optogenetic stimulation
 """
+
 import logging
 import sys
 from argparse import ArgumentTypeError
+import random
+from importlib.util import find_spec
 from pathlib import Path
 from typing import Literal
 import warnings
@@ -19,8 +22,6 @@ import yaml
 import iblrig
 from iblrig.base_choice_world import SOFTCODE, BiasedChoiceWorldSession
 from pybpodapi.protocol import StateMachine
-from importlib import reload
-import random
 
 ZAPIT_PYTHON = r'C:\zapit-tcp-bridge\python'
 
@@ -31,9 +32,8 @@ try:
     from TCPclient import TCPclient
 except (AssertionError, ModuleNotFoundError):
     warnings.warn(
-        'Please clone https://github.com/Zapit-Optostim/zapit-tcp-bridge to '
-        f'{Path(ZAPIT_PYTHON).parents[1]}', RuntimeWarning)
-
+        'Please clone https://github.com/Zapit-Optostim/zapit-tcp-bridge to ' f'{Path(ZAPIT_PYTHON).parents[1]}', RuntimeWarning
+    )
 
 log = logging.getLogger('iblrig.task')
 
@@ -58,11 +58,13 @@ class OptoStateMachine(StateMachine):
         is_opto_stimulation=False,
         states_opto_ttls=None,
         states_opto_stop=None,
+        states_mask_ttls=None,
     ):
         super().__init__(bpod)
         self.is_opto_stimulation = is_opto_stimulation
         self.states_opto_ttls = states_opto_ttls or []
         self.states_opto_stop = states_opto_stop or []
+        self.states_mask_ttls = states_mask_ttls or []
 
     def add_state(self, **kwargs):
         if self.is_opto_stimulation:
@@ -73,6 +75,10 @@ class OptoStateMachine(StateMachine):
                 ]
             elif kwargs['state_name'] in self.states_opto_stop:
                 kwargs['output_actions'] += [('SoftCode', SOFTCODE_STOP_ZAPIT)]
+        if kwargs['state_name'] in self.states_mask_ttls:
+            kwargs['output_actions'] += [
+                ('PWM1', 255),
+            ]
         super().add_state(**kwargs)
 
 
@@ -87,12 +93,14 @@ class Session(BiasedChoiceWorldSession):
         contrast_set_probability_type: Literal['skew_zero', 'uniform'] = DEFAULTS['CONTRAST_SET_PROBABILITY_TYPE'],
         opto_ttl_states: list[str] = DEFAULTS['OPTO_TTL_STATES'],
         opto_stop_states: list[str] = DEFAULTS['OPTO_STOP_STATES'],
+        mask_ttl_states: list[str] = DEFAULTS['MASK_TTL_STATES'],
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self.task_params['CONTRAST_SET_PROBABILITY_TYPE'] = contrast_set_probability_type
         self.task_params['OPTO_TTL_STATES'] = opto_ttl_states
         self.task_params['OPTO_STOP_STATES'] = opto_stop_states
+        self.task_params['MASK_TTL_STATES'] = mask_ttl_states
         self.task_params['PROBABILITY_OPTO_STIM'] = probability_opto_stim
 
         # generates the opto stimulation for each trial
@@ -132,18 +140,26 @@ class Session(BiasedChoiceWorldSession):
 
         current_location_idx = self.trials_table.at[self.trial_num, 'laser_location_idx']
 
-        #hZP.send_samples(
+        # hZP.send_samples(
         #    conditionNum=current_location_idx, hardwareTriggered=True, logging=True
-        #)
+        # )
 
         zapit_byte_tuple, zapit_int_tuple = ptu.gen_Zapit_byte_tuple(
             trial_state_command=1,
-            arg_keys_dict={'conditionNum_channel': True, 'laser_channel': True,
-                           'hardwareTriggered_channel': True, 'logging_channel': False,
-                           'verbose_channel': False},
-            arg_values_dict={'conditionNum': current_location_idx, 'laser_ON': True,
-                             'hardwareTriggered_ON': True, 'logging_ON': False,
-                             'verbose_ON': False}
+            arg_keys_dict={
+                'conditionNum_channel': True,
+                'laser_channel': True,
+                'hardwareTriggered_channel': True,
+                'logging_channel': False,
+                'verbose_channel': False,
+            },
+            arg_values_dict={
+                'conditionNum': current_location_idx,
+                'laser_ON': True,
+                'hardwareTriggered_ON': True,
+                'logging_ON': False,
+                'verbose_ON': False,
+            },
         )
         response = self.client.send_receive(zapit_byte_tuple)
         log.warning(response)
@@ -158,12 +174,20 @@ class Session(BiasedChoiceWorldSession):
         current_location_idx = self.trials_table.at[self.trial_num, 'laser_location_idx']
         zapit_byte_tuple, zapit_int_tuple = ptu.gen_Zapit_byte_tuple(
             trial_state_command=0,
-            arg_keys_dict={'conditionNum_channel': True, 'laser_channel': True,
-                           'hardwareTriggered_channel': True, 'logging_channel': False,
-                           'verbose_channel': False},
-            arg_values_dict={'conditionNum': current_location_idx, 'laser_ON': True,
-                             'hardwareTriggered_ON': False, 'logging_ON': False,
-                             'verbose_ON': False}
+            arg_keys_dict={
+                'conditionNum_channel': True,
+                'laser_channel': True,
+                'hardwareTriggered_channel': True,
+                'logging_channel': False,
+                'verbose_channel': False,
+            },
+            arg_values_dict={
+                'conditionNum': current_location_idx,
+                'laser_ON': True,
+                'hardwareTriggered_ON': False,
+                'logging_ON': False,
+                'verbose_ON': False,
+            },
         )
         response = self.client.send_receive(zapit_byte_tuple)
 
@@ -182,11 +206,13 @@ class Session(BiasedChoiceWorldSession):
             is_opto_stimulation=is_opto_stimulation,
             states_opto_ttls=self.task_params['OPTO_TTL_STATES'],
             states_opto_stop=self.task_params['OPTO_STOP_STATES'],
+            states_mask_ttls=self.task_params['MASK_TTL_STATES'],
         )
 
     @staticmethod
     def extra_parser():
         """:return: argparse.parser()"""
+
         def positive_int(value):
             if (value := int(value)) <= 0:
                 raise ArgumentTypeError(f'"{value}" is an invalid positive int value')
@@ -233,6 +259,15 @@ class Session(BiasedChoiceWorldSession):
             default=DEFAULTS['NUM_OPTO_COND'],
             type=positive_int,
             help='the number (N) of preset conditions to draw from, where N > x > 0',
+        )
+        parser.add_argument(
+            '--mask_ttl_states',
+            option_strings=['--mask_ttl_states'],
+            dest='mask_ttl_states',
+            default=DEFAULTS['MASK_TTL_STATES'],
+            nargs='+',
+            type=str,
+            help='list of the state machine states where mask stim should be delivered',
         )
         return parser
 
