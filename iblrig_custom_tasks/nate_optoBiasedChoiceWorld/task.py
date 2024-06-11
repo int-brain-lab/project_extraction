@@ -8,13 +8,12 @@ Additionally the state machine is modified to add output TTLs for optogenetic st
 """
 
 import logging
-import sys
-from argparse import ArgumentTypeError
 import random
-from importlib.util import find_spec
+import sys
+import warnings
+from argparse import ArgumentTypeError
 from pathlib import Path
 from typing import Literal
-import warnings
 
 import numpy as np
 import yaml
