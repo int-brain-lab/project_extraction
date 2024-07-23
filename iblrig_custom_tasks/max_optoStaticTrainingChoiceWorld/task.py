@@ -20,8 +20,8 @@ import yaml
 import iblrig
 from iblrig.base_choice_world import SOFTCODE 
 from pybpodapi.protocol import StateMachine
-from ..max_staticTrainingChoiceWorld.task import Session as StaticTrainingChoiceSession 
-from .PulsePal import PulsePalMixin
+from iblrig_custom_tasks.max_staticTrainingChoiceWorld.task import Session as StaticTrainingChoiceSession 
+from iblrig_custom_tasks.max_optoStaticTrainingChoiceWorld.PulsePal import PulsePalMixin
 
 stim_location_history = []
 
@@ -39,7 +39,7 @@ with open(Path(__file__).parent.joinpath('task_parameters.yaml')) as f:
 
 class Session(StaticTrainingChoiceSession, PulsePalMixin):
     protocol_name = 'max_optoStaticTrainingChoiceWorld'
-    extractor_tasks = StaticTrainingChoiceSession.extractor_tasks # TODO: add opto extractor tasks here?
+    #extractor_tasks = StaticTrainingChoiceSession.extractor_tasks # TODO: add opto extractor tasks here?
 
     def __init__(
         self,
@@ -67,11 +67,14 @@ class Session(StaticTrainingChoiceSession, PulsePalMixin):
         t = np.linspace(0, RAMP_SECONDS, 1000)
         v = np.concatenate((np.array([5]), ramp))
         t = np.concatenate((np.array([0]), t + TMAX))
-        self.stim_length_seconds = TMAX
 
         self.pulsepal_connection.programOutputChannelParam('phase1Duration', 1, TMAX)
         self.pulsepal_connection.sendCustomPulseTrain(1, t, v)
         self.pulsepal_connection.programOutputChannelParam('customTrainID', 1, 1)
+
+    @property
+    def stim_length_seconds(self):
+        return TMAX
 
     def stop_opto_stim(self):
         # we will modify this function to ramp down the opto stim rather than abruptly stopping it

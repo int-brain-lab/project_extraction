@@ -85,7 +85,7 @@ class PulsePalMixin(ABC):
 
     @abstractmethod
     def arm_opto_stim(self, ttl_output_channel):
-        raise NotImplementedError, "User must define the stimulus and trigger type to deliver with pulsepal"
+        raise NotImplementedError("User must define the stimulus and trigger type to deliver with pulsepal")
         # Define the pulse sequence and load it to the desired output channel here
         # This method should not fire the pulse train, that is handled by start_opto_stim() (soft-trigger) or a hardware trigger
         # See https://github.com/sanworks/PulsePal/blob/master/Python/Python3/PulsePalExample.py for examples
