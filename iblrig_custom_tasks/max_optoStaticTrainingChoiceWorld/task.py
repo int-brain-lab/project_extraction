@@ -30,7 +30,6 @@ log = logging.getLogger('iblrig.task')
 NTRIALS_INIT = 2000
 SOFTCODE_FIRE_LED = max(SOFTCODE).value + 1
 SOFTCODE_RAMP_DOWN_LED = max(SOFTCODE).value + 2
-TMAX = 5 # max time for opto stim # TODO: make this a parmeter
 RAMP_SECONDS = .25 # time to ramp down the opto stim # TODO: make this a parameter
 
 # read defaults from task_parameters.yaml
@@ -47,12 +46,14 @@ class Session(StaticTrainingChoiceSession, PulsePalMixin):
         probability_opto_stim: float = DEFAULTS['PROBABILITY_OPTO_STIM'],
         opto_ttl_states: list[str] = DEFAULTS['OPTO_TTL_STATES'],
         opto_stop_states: list[str] = DEFAULTS['OPTO_STOP_STATES'],
+        max_laser_time: float = DEFAULTS['MAX_LASER_TIME'],
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self.task_params['OPTO_TTL_STATES'] = opto_ttl_states
         self.task_params['OPTO_STOP_STATES'] = opto_stop_states
         self.task_params['PROBABILITY_OPTO_STIM'] = probability_opto_stim
+        self.task_params['MAX_LASER_TIME'] = max_laser_time
 
         # generates the opto stimulation for each trial
         self.trials_table['opto_stimulation'] = np.random.choice(
@@ -66,27 +67,27 @@ class Session(StaticTrainingChoiceSession, PulsePalMixin):
         ramp = np.linspace(5, 0, 1000)
         t = np.linspace(0, RAMP_SECONDS, 1000)
         v = np.concatenate((np.array([5]), ramp))
-        t = np.concatenate((np.array([0]), t + TMAX))
+        t = np.concatenate((np.array([0]), t + self.task_params['MAX_LASER_TIME']))
 
-        self.pulsepal_connection.programOutputChannelParam('phase1Duration', 1, TMAX)
+        self.pulsepal_connection.programOutputChannelParam('phase1Duration', 1, self.task_params['MAX_LASER_TIME'])
         self.pulsepal_connection.sendCustomPulseTrain(1, t, v)
         self.pulsepal_connection.programOutputChannelParam('customTrainID', 1, 1)
 
     @property
     def stim_length_seconds(self):
-        return TMAX
+        return self.task_params['MAX_LASER_TIME']
 
     def stop_opto_stim(self):
         # we will modify this function to ramp down the opto stim rather than abruptly stopping it
         # send instructions to set the TTL back to 0
-        self.pulsepal_connection.programOutputChannelParam('phase1Duration', 2, TMAX)
+        self.pulsepal_connection.programOutputChannelParam('phase1Duration', 2, self.task_params['MAX_LASER_TIME'])
         self.pulsepal_connection.sendCustomPulseTrain(2, [0,], [0,])
         self.pulsepal_connection.programOutputChannelParam('customTrainID', 2, 2)
 
         # send instructions to ramp the opto stim down to 0
         v = np.linspace(5, 0, 1000)
         t = np.linspace(0, RAMP_SECONDS, 1000)
-        self.pulsepal_connection.programOutputChannelParam('phase1Duration', 1, TMAX)
+        self.pulsepal_connection.programOutputChannelParam('phase1Duration', 1, self.task_params['MAX_LASER_TIME'])
         self.pulsepal_connection.sendCustomPulseTrain(1, t, v)
         self.pulsepal_connection.programOutputChannelParam('customTrainID', 1, 1)
 
@@ -129,7 +130,16 @@ class Session(StaticTrainingChoiceSession, PulsePalMixin):
             type=str,
             help='list of the state machine states where opto stim should be stopped',
         )
-      
+        parser.add_argument(
+            '--max_laser_time',
+            option_strings=['--max_laser_time'],
+            dest='max_laser_time',
+            default=DEFAULTS['MAX_LASER_TIME'],
+            nargs='+',
+            type=float,
+            help='Maximum laser duration in seconds',
+        )
+
         return parser
 
 
