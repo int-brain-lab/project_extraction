@@ -64,6 +64,7 @@ class Session(StaticTrainingChoiceSession, PulsePalMixin):
 
     def arm_opto_stim(self):
         # define a contant offset voltage with a ramp down at the end to avoid rebound excitation
+        # TODO: set the laser power appropriately based on calibration values!
         ramp = np.linspace(5, 0, 1000)
         t = np.linspace(0, RAMP_SECONDS, 1000)
         v = np.concatenate((np.array([5]), ramp))

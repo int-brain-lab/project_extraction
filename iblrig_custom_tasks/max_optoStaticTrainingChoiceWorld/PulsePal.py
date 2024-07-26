@@ -24,9 +24,9 @@ class PulsePalStateMachine(StateMachine):
             - adds soft-codes for starting and stopping the opto stim
             OR
             - sets up a TTL to hardware trigger the PulsePal
-        2. sets up a TTL channel for recording opto stim times from the PulsePal
+        2. (not yet implemented!!!) sets up a TTL channel for recording opto stim times from the PulsePal
     """
-    # TODO: define the TTL channel for recording opto stim times
+    # TODO: define the TTL channel for recording opto stim times?
     def __init__(
         self,
         bpod,
@@ -122,6 +122,10 @@ class PulsePalMixin(ABC):
         # this will stop the pulse train instantly (and the corresponding TTL pulse)
         # To avoid rebound spiking in the case of GtACR, a ramp down is recommended
         self.pulsepal_connection.abortPulseTrains()
+
+    def compute_vmax_from_calibration(self, calibration_value):
+        # TODO: implement this method to convert the calibration value to a voltage for the opto stim
+        pass
 
     def _instantiate_state_machine(self, trial_number=None):
         """
