@@ -72,7 +72,7 @@ class PulsePalMixin(ABC):
     """
 
     def start_opto_hardware(self):
-        self.pulsepal_connection = PulsePalObject('COM3') # TODO: get port from hardware params
+        self.pulsepal_connection = PulsePalObject('COM8') # TODO: get port from hardware params
         log.warning('Connected to PulsePal')
         # TODO: get the calibration value for this specific cannula
         #super().start_hardware() # TODO: move this out
@@ -110,13 +110,14 @@ class PulsePalMixin(ABC):
 
     def arm_ttl_stim(self):
         # a TTL pulse from channel 2 that rises when the opto stim starts and falls when it stops
+        log.warning('Arming TTL signal')
         self.pulsepal_connection.programOutputChannelParam('phase1Duration', 2, self.stim_length_seconds)
         self.pulsepal_connection.sendCustomPulseTrain(2, [0,], [V_MAX,])
         self.pulsepal_connection.programOutputChannelParam('customTrainID', 2, 2)
         
     def start_opto_stim(self, channels_to_trigger):
         self.pulsepal_connection.triggerOutputChannels(1, 1, 0, 0)
-        
+        log.warning('Started opto stim')
     
     def stop_opto_stim(self):
         # this will stop the pulse train instantly (and the corresponding TTL pulse)
@@ -133,6 +134,7 @@ class PulsePalMixin(ABC):
         :param trial_number:
         :return:
         """
+        log.warning('Instantiating state machine')
         is_opto_stimulation = self.trials_table.at[trial_number, 'opto_stimulation']
         if is_opto_stimulation:
             self.arm_opto_stim()

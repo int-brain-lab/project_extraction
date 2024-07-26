@@ -14,6 +14,7 @@
   - error
   - reward
 'PROBABILITY_OPTO_STIM': 0.2  # probability of optogenetic stimulation
+'MAX_LASER_TIME': 6.0
 #'MASK_TTL_STATES': # list of the state machine states where mask stim should be delivered
 #  - trial_start
 #  - delay_initiation

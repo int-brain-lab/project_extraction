@@ -65,6 +65,7 @@ class Session(StaticTrainingChoiceSession, PulsePalMixin):
     def arm_opto_stim(self):
         # define a contant offset voltage with a ramp down at the end to avoid rebound excitation
         # TODO: set the laser power appropriately based on calibration values!
+        log.warning('Arming opto stim')
         ramp = np.linspace(5, 0, 1000)
         t = np.linspace(0, RAMP_SECONDS, 1000)
         v = np.concatenate((np.array([5]), ramp))
@@ -84,7 +85,7 @@ class Session(StaticTrainingChoiceSession, PulsePalMixin):
         self.pulsepal_connection.programOutputChannelParam('phase1Duration', 2, self.task_params['MAX_LASER_TIME'])
         self.pulsepal_connection.sendCustomPulseTrain(2, [0,], [0,])
         self.pulsepal_connection.programOutputChannelParam('customTrainID', 2, 2)
-
+        
         # send instructions to ramp the opto stim down to 0
         v = np.linspace(5, 0, 1000)
         t = np.linspace(0, RAMP_SECONDS, 1000)
@@ -94,6 +95,7 @@ class Session(StaticTrainingChoiceSession, PulsePalMixin):
 
         # trigger these instructions
         self.pulsepal_connection.triggerOutputChannels(1, 1, 0, 0)
+        log.warning('Stopped opto stim')
 
     def start_hardware(self):
         super().start_hardware()
@@ -136,7 +138,6 @@ class Session(StaticTrainingChoiceSession, PulsePalMixin):
             option_strings=['--max_laser_time'],
             dest='max_laser_time',
             default=DEFAULTS['MAX_LASER_TIME'],
-            nargs='+',
             type=float,
             help='Maximum laser duration in seconds',
         )
