@@ -41,18 +41,20 @@ class PulsePalStateMachine(StateMachine):
         self.states_opto_ttls = states_opto_ttls or []
         self.states_opto_stop = states_opto_stop or []
 
+        # FIXME: NEED TO PICK A DIFFERENT STATE IF MICE DONT KNOW THE TASK, ONE THAT IS AT THE END OF THE ITI, NOT TRIAL START (MAYBE STIM ON)
+
     def add_state(self, **kwargs):
         if self.is_opto_stimulation:
             if kwargs['state_name'] in self.states_opto_ttls:
                 if self.trigger_type == 'soft':
-                    kwargs['output_actions'] += ('SoftCode', SOFTCODE_FIRE_PULSEPAL)
+                    kwargs['output_actions'] += [('SoftCode', SOFTCODE_FIRE_PULSEPAL),]
                 elif self.trigger_type == 'hardware':
-                    kwargs['output_actions'] += ('BNC2', 255)
+                    kwargs['output_actions'] += [('BNC2', 255),]
             elif kwargs['state_name'] in self.states_opto_stop:
                 if self.trigger_type == 'soft':
-                    kwargs['output_actions'] += ('SoftCode', SOFTCODE_STOP_PULSEPAL)
+                    kwargs['output_actions'] += [('SoftCode', SOFTCODE_STOP_PULSEPAL),]
                 elif self.trigger_type == 'hardware':
-                    kwargs['output_actions'] += ('BNC2', 0)
+                    kwargs['output_actions'] += [('BNC2', 0),]
       
         super().add_state(**kwargs)
 
@@ -115,7 +117,7 @@ class PulsePalMixin(ABC):
         self.pulsepal_connection.sendCustomPulseTrain(2, [0,], [V_MAX,])
         self.pulsepal_connection.programOutputChannelParam('customTrainID', 2, 2)
         
-    def start_opto_stim(self, channels_to_trigger):
+    def start_opto_stim(self):
         self.pulsepal_connection.triggerOutputChannels(1, 1, 0, 0)
         log.warning('Started opto stim')
     
@@ -127,25 +129,6 @@ class PulsePalMixin(ABC):
     def compute_vmax_from_calibration(self, calibration_value):
         # TODO: implement this method to convert the calibration value to a voltage for the opto stim
         pass
-
-    def _instantiate_state_machine(self, trial_number=None):
-        """
-        We override this using the custom class PulsePalStateMachine that appends TTLs for optogenetic stimulation where needed
-        :param trial_number:
-        :return:
-        """
-        log.warning('Instantiating state machine')
-        is_opto_stimulation = self.trials_table.at[trial_number, 'opto_stimulation']
-        if is_opto_stimulation:
-            self.arm_opto_stim()
-            self.arm_ttl_stim()
-        return PulsePalStateMachine(
-            self.bpod,
-            trigger_type='soft', # software trigger
-            is_opto_stimulation=is_opto_stimulation,
-            states_opto_ttls=self.task_params['OPTO_TTL_STATES'],
-            states_opto_stop=self.task_params['OPTO_STOP_STATES'],
-        )
     
     def __del__(self):
         del self.pulsepal_connection

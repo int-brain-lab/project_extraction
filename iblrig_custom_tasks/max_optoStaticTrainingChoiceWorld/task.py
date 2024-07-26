@@ -21,7 +21,7 @@ import iblrig
 from iblrig.base_choice_world import SOFTCODE 
 from pybpodapi.protocol import StateMachine
 from iblrig_custom_tasks.max_staticTrainingChoiceWorld.task import Session as StaticTrainingChoiceSession 
-from iblrig_custom_tasks.max_optoStaticTrainingChoiceWorld.PulsePal import PulsePalMixin
+from iblrig_custom_tasks.max_optoStaticTrainingChoiceWorld.PulsePal import PulsePalMixin, PulsePalStateMachine
 
 stim_location_history = []
 
@@ -61,14 +61,34 @@ class Session(StaticTrainingChoiceSession, PulsePalMixin):
             p=[1 - probability_opto_stim, probability_opto_stim],
             size=NTRIALS_INIT,
         ).astype(bool)
+        log.warning(self.trials_table['opto_stimulation'])
+    
+    def _instantiate_state_machine(self, trial_number=None):
+        """
+        We override this using the custom class PulsePalStateMachine that appends TTLs for optogenetic stimulation where needed
+        :param trial_number:
+        :return:
+        """
+        log.warning('Instantiating state machine')
+        is_opto_stimulation = self.trials_table.at[trial_number, 'opto_stimulation']
+        if is_opto_stimulation:
+            self.arm_opto_stim()
+            self.arm_ttl_stim()
+        return PulsePalStateMachine(
+            self.bpod,
+            trigger_type='soft', # software trigger
+            is_opto_stimulation=is_opto_stimulation,
+            states_opto_ttls=self.task_params['OPTO_TTL_STATES'],
+            states_opto_stop=self.task_params['OPTO_STOP_STATES'],
+        )
 
     def arm_opto_stim(self):
         # define a contant offset voltage with a ramp down at the end to avoid rebound excitation
         # TODO: set the laser power appropriately based on calibration values!
         log.warning('Arming opto stim')
-        ramp = np.linspace(5, 0, 1000)
+        ramp = np.linspace(5, 0, 1000) # SET POWER
         t = np.linspace(0, RAMP_SECONDS, 1000)
-        v = np.concatenate((np.array([5]), ramp))
+        v = np.concatenate((np.array([5]), ramp)) # SET POWER
         t = np.concatenate((np.array([0]), t + self.task_params['MAX_LASER_TIME']))
 
         self.pulsepal_connection.programOutputChannelParam('phase1Duration', 1, self.task_params['MAX_LASER_TIME'])
@@ -93,6 +113,7 @@ class Session(StaticTrainingChoiceSession, PulsePalMixin):
         self.pulsepal_connection.sendCustomPulseTrain(1, t, v)
         self.pulsepal_connection.programOutputChannelParam('customTrainID', 1, 1)
 
+        # FIXME: THIS IS CURRENTLY RESETING THE LED HIGH IF T_MAX HAS ELAPSED. NEED TO FIX!
         # trigger these instructions
         self.pulsepal_connection.triggerOutputChannels(1, 1, 0, 0)
         log.warning('Stopped opto stim')
