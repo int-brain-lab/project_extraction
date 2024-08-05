@@ -80,6 +80,7 @@ class Session(StaticTrainingChoiceSession, PulsePalMixin):
             is_opto_stimulation=is_opto_stimulation,
             states_opto_ttls=self.task_params['OPTO_TTL_STATES'],
             states_opto_stop=self.task_params['OPTO_STOP_STATES'],
+            opto_t_max_seconds=self.task_params['MAX_LASER_TIME'],
         )
 
     def arm_opto_stim(self):
@@ -100,6 +101,10 @@ class Session(StaticTrainingChoiceSession, PulsePalMixin):
         return self.task_params['MAX_LASER_TIME']
 
     def stop_opto_stim(self):
+        if self.bpod.Events.GlobalTimer1_End:
+            log.warning('Stopped opto stim - hit opto timeout')
+            return # the LED should have turned off by now, we don't need to force the ramp down
+
         # we will modify this function to ramp down the opto stim rather than abruptly stopping it
         # send instructions to set the TTL back to 0
         self.pulsepal_connection.programOutputChannelParam('phase1Duration', 2, self.task_params['MAX_LASER_TIME'])
@@ -113,10 +118,9 @@ class Session(StaticTrainingChoiceSession, PulsePalMixin):
         self.pulsepal_connection.sendCustomPulseTrain(1, t, v)
         self.pulsepal_connection.programOutputChannelParam('customTrainID', 1, 1)
 
-        # FIXME: THIS IS CURRENTLY RESETING THE LED HIGH IF T_MAX HAS ELAPSED. NEED TO FIX!
         # trigger these instructions
         self.pulsepal_connection.triggerOutputChannels(1, 1, 0, 0)
-        log.warning('Stopped opto stim')
+        log.warning('Stopped opto stim - hit a stop opto state')
 
     def start_hardware(self):
         super().start_hardware()

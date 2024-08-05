@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 from iblrig.base_choice_world import SOFTCODE 
-from pybpodapi.protocol import StateMachine
+from pybpodapi.protocol import StateMachine, Bpod
 from pypulsepal import PulsePalObject
 from iblrig.base_tasks import BaseSession
 
@@ -34,6 +34,7 @@ class PulsePalStateMachine(StateMachine):
         is_opto_stimulation=False,
         states_opto_ttls=None,
         states_opto_stop=None,
+        opto_t_max_seconds=None,
     ):
         super().__init__(bpod)
         self.trigger_type = trigger_type
@@ -41,7 +42,8 @@ class PulsePalStateMachine(StateMachine):
         self.states_opto_ttls = states_opto_ttls or []
         self.states_opto_stop = states_opto_stop or []
 
-        # FIXME: NEED TO PICK A DIFFERENT STATE IF MICE DONT KNOW THE TASK, ONE THAT IS AT THE END OF THE ITI, NOT TRIAL START (MAYBE STIM ON)
+        # Set global timer 1 for T_MAX
+        self.set_global_timer_legacy(timer_id=1, timer_duration=opto_t_max_seconds)
 
     def add_state(self, **kwargs):
         if self.is_opto_stimulation:
@@ -50,6 +52,7 @@ class PulsePalStateMachine(StateMachine):
                     kwargs['output_actions'] += [('SoftCode', SOFTCODE_FIRE_PULSEPAL),]
                 elif self.trigger_type == 'hardware':
                     kwargs['output_actions'] += [('BNC2', 255),]
+                kwargs['output_actions'] += [(Bpod.OutputChannels.GlobalTimerTrig, 1)] # start the global timer when the opto stim comes on
             elif kwargs['state_name'] in self.states_opto_stop:
                 if self.trigger_type == 'soft':
                     kwargs['output_actions'] += [('SoftCode', SOFTCODE_STOP_PULSEPAL),]
