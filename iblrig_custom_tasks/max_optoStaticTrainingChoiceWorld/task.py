@@ -16,6 +16,7 @@ from typing import Literal
 
 import numpy as np
 import yaml
+import time
 
 import iblrig
 from iblrig.base_choice_world import SOFTCODE 
@@ -72,6 +73,9 @@ class Session(StaticTrainingChoiceSession, PulsePalMixin):
         :param trial_number:
         :return:
         """
+        # PWM1 is the LED OUTPUT for port interface board
+        # Input is PortIn1
+        # TODO: enable input port?
         log.warning('Instantiating state machine')
         is_opto_stimulation = self.trials_table.at[trial_number, 'opto_stimulation']
         if is_opto_stimulation:
@@ -99,19 +103,20 @@ class Session(StaticTrainingChoiceSession, PulsePalMixin):
         self.pulsepal_connection.sendCustomPulseTrain(1, t, v)
         self.pulsepal_connection.programOutputChannelParam('customTrainID', 1, 1)
 
+    def start_opto_stim(self):
+        super().start_opto_stim()
+        self.opto_start_time = time.time()
+
     @property
     def stim_length_seconds(self):
         return self.task_params['MAX_LASER_TIME']
 
     def stop_opto_stim(self):
-
         log.warning('Entered stop_opto_stim_function')
-        log.warning(f'Value of timer is: {self.bpod.Events.GlobalTimer1_End}')
-        log.warning(self.bpod.Events.GlobalTimer1_End)
-
-        if self.bpod.Events.GlobalTimer1_End:
+        if time.time() - self.opto_start_time >= self.task_params['MAX_LASER_TIME']:
+            # the LED should have turned off by now, we don't need to force the ramp down
             log.warning('Stopped opto stim - hit opto timeout')
-            return # the LED should have turned off by now, we don't need to force the ramp down
+            return 
 
         # we will modify this function to ramp down the opto stim rather than abruptly stopping it
         # send instructions to set the TTL back to 0
