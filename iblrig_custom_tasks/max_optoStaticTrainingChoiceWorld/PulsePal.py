@@ -43,7 +43,7 @@ class PulsePalStateMachine(StateMachine):
         self.states_opto_stop = states_opto_stop or []
 
         # Set global timer 1 for T_MAX
-        self.set_global_timer_legacy(timer_id=1, timer_duration=opto_t_max_seconds)
+        self.set_global_timer(timer_id=1, timer_duration=opto_t_max_seconds)
 
     def add_state(self, **kwargs):
         if self.is_opto_stimulation:
@@ -77,7 +77,7 @@ class PulsePalMixin(ABC):
     """
 
     def start_opto_hardware(self):
-        self.pulsepal_connection = PulsePalObject('COM8') # TODO: get port from hardware params
+        self.pulsepal_connection = PulsePalObject('COM13') # TODO: get port from hardware params
         log.warning('Connected to PulsePal')
         # TODO: get the calibration value for this specific cannula
         #super().start_hardware() # TODO: move this out

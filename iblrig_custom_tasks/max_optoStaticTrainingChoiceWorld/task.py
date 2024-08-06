@@ -56,11 +56,14 @@ class Session(StaticTrainingChoiceSession, PulsePalMixin):
         self.task_params['MAX_LASER_TIME'] = max_laser_time
 
         # generates the opto stimulation for each trial
-        self.trials_table['opto_stimulation'] = np.random.choice(
-            [0, 1],
-            p=[1 - probability_opto_stim, probability_opto_stim],
-            size=NTRIALS_INIT,
-        ).astype(bool)
+        opto = np.random.choice(
+                    [0, 1],
+                    p=[1 - probability_opto_stim, probability_opto_stim],
+                    size=NTRIALS_INIT,
+                ).astype(bool)
+
+        opto[0] = False
+        self.trials_table['opto_stimulation'] = opto
         log.warning(self.trials_table['opto_stimulation'])
     
     def _instantiate_state_machine(self, trial_number=None):
@@ -101,6 +104,11 @@ class Session(StaticTrainingChoiceSession, PulsePalMixin):
         return self.task_params['MAX_LASER_TIME']
 
     def stop_opto_stim(self):
+
+        log.warning('Entered stop_opto_stim_function')
+        log.warning(f'Value of timer is: {self.bpod.Events.GlobalTimer1_End}')
+        log.warning(self.bpod.Events.GlobalTimer1_End)
+
         if self.bpod.Events.GlobalTimer1_End:
             log.warning('Stopped opto stim - hit opto timeout')
             return # the LED should have turned off by now, we don't need to force the ramp down
