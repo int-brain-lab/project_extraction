@@ -1,10 +1,7 @@
-"""Bpod extractor for max_optoStaticChoiceWorld task.
+"""Bpod extractor for max_optoStaticTrainingChoiceWorld task.
 
-This is the same as advancedChoiceWorld with the addition of one dataset, `laserStimulation.intervals`; The times the
-laser was on.
-
-The pipeline task subclasses, OptoTrialsBpod and OptoTrialsNidq, aren't strictly necessary. They simply assert that the
-laserStimulation datasets were indeed saved and registered by the Bpod extractor class.
+This is the same as advancedChoiceWorld with the addition of one dataset, `optoStimulation.intervals`; The times the
+led was on.
 """
 
 import numpy as np
@@ -15,6 +12,7 @@ from ibllib.pipes.behavior_tasks import ChoiceWorldTrialsNidq, ChoiceWorldTrials
 from ibllib.qc.task_metrics import TaskQC as BaseTaskQC
 from inspect import getmembers, ismethod
 
+# TODO: DO I NEED THIS CLASS?
 class PulsePalTrialsBpod(ChoiceWorldTrialsBpod):
     """Extract bpod only trials and pulsepal stimulation data."""
     @property
@@ -59,7 +57,6 @@ class TaskQC(BaseTaskQC):
         #passed = metric > 0
         #assert data['intervals'].shape[0] == len(metric) == len(passed)
         return metric, passed
-
 
 class TrialsOpto(BaseBpodTrialsExtractor):
     var_names = BiasedTrials.var_names + ('opto_intervals',)
