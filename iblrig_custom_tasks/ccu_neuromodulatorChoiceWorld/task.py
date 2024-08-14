@@ -37,7 +37,7 @@ class Session(BiasedChoiceWorldSession):
         trials_table : pandas.DataFrame
             table containing trial-wise information for the template session
         """
-        fpath = Path(__file__).parent.joinpath('trials_fixtures.pqt')
+        fpath = Path(__file__).parent.joinpath('neuromodcw_session_templates.pqt')
         df_sessions = pd.read_parquet(fpath)
         trials_table = df_sessions[df_sessions['session_id'] == session_id]
         return trials_table
