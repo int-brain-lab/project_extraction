@@ -1,13 +1,14 @@
 import numpy as np
 import pandas as pd
+from pathlib import Path
 
-import iblrig.misc import truncated_exponential, get_task_arguments
+from iblrig.misc import truncated_exponential, get_task_arguments
 from iblrig.base_choice_world import BiasedChoiceWorldSession
 from iblrig.hardware import SOFTCODE
 from pybpodapi.protocol import StateMachine
 
-# import logging
-# log = logging.getLogger(__name__)
+import logging
+log = logging.getLogger(__name__)
 
 
 class Session(BiasedChoiceWorldSession):
@@ -39,7 +40,7 @@ class Session(BiasedChoiceWorldSession):
         """
         fpath = Path(__file__).parent.joinpath('neuromodcw_session_templates.pqt')
         df_sessions = pd.read_parquet(fpath)
-        trials_table = df_sessions[df_sessions['session_id'] == session_id]
+        trials_table = df_sessions[df_sessions['session_id'] == session_template_id]
         return trials_table
 
     @staticmethod
@@ -267,6 +268,6 @@ class Session(BiasedChoiceWorldSession):
         return False
 
 if __name__ == '__main__':  # pragma: no cover
-    kwargs = iblrig.misc.get_task_arguments(parents=[Session.extra_parser()])
+    kwargs = get_task_arguments(parents=[Session.extra_parser()])
     sess = Session(**kwargs)
     sess.run()
