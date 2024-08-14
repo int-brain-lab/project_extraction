@@ -25,6 +25,7 @@ class Session(ActiveChoiceWorldSession):
     """
 
     protocol_name = 'max_staticTrainingChoiceWorld'
+    extractor_tasks = ['ChoiceWorldTrials']
 
     def __init__(
         self,

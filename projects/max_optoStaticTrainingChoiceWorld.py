@@ -12,18 +12,6 @@ from ibllib.pipes.behavior_tasks import ChoiceWorldTrialsNidq, ChoiceWorldTrials
 from ibllib.qc.task_metrics import TaskQC as BaseTaskQC
 from inspect import getmembers, ismethod
 
-# TODO: DO I NEED THIS CLASS?
-class PulsePalTrialsBpod(ChoiceWorldTrialsBpod):
-    """Extract bpod only trials and pulsepal stimulation data."""
-    @property
-    def signature(self):
-        signature = super().signature
-        signature['output_files'].append(('*optoStimulation.intervals.npy', self.output_collection, True))
-        return signature
-
-
-# TODO: will eventually need to write the nidaq extractor
-
 class TaskQC(BaseTaskQC):
     def _get_checks(self):
         def is_metric(x):
@@ -88,3 +76,17 @@ class TrialsOpto(BaseBpodTrialsExtractor):
         out['opto_intervals'] = np.array(laser_intervals, dtype=np.float64)
 
         return {k: out[k] for k in self.var_names}  # Ensures all datasets present and ordered
+
+class PulsePalTrialsBpod(ChoiceWorldTrialsBpod):
+    """Extract bpod only trials and pulsepal stimulation data."""
+    @property
+    def signature(self):
+        signature = super().signature
+        signature['output_files'].append(('*optoStimulation.intervals.npy', self.output_collection, True))
+        return signature
+
+    def run_qc(self, trials_data=None, update=True, QC=TaskQC,**kwargs):
+        return super().run_qc(trials_data=trials_data, update=update, QC=QC, **kwargs)
+
+
+# TODO: will eventually need to write the nidaq extractor

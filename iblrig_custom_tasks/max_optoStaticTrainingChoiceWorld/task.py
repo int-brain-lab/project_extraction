@@ -39,7 +39,7 @@ with open(Path(__file__).parent.joinpath('task_parameters.yaml')) as f:
 
 class Session(StaticTrainingChoiceSession, PulsePalMixin):
     protocol_name = 'max_optoStaticTrainingChoiceWorld'
-    #extractor_tasks = StaticTrainingChoiceSession.extractor_tasks # TODO: add opto extractor tasks here?
+    extractor_tasks = ['PulsePalTrials']
 
     def __init__(
         self,
