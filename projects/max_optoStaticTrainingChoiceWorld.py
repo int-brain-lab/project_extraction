@@ -21,6 +21,14 @@ class TaskQC(BaseTaskQC):
         checks.update(dict(getmembers(self, is_metric)))
         return checks
 
+    def check_opto_percentage(self, data, **_):
+        p_opto = self.extractor.settings['PROBABILITY_OPTO_STIM']
+        is_opto_trial = ~np.isnan(data['opto_intervals'][:, 0])
+        n_trials = len(is_opto_trial)
+        actual_p_opto = np.sum(is_opto_trial) / n_trials
+        passed = np.isclose(p_opto, actual_p_opto, rtol=0, atol=.2)
+        return actual_p_opto, passed
+        
     def check_opto_stim_intervals(self, data, **_):
         """
         1. Verify that the laser stimulation intervals are within the trial intervals of an opto_on trial.
@@ -40,11 +48,14 @@ class TaskQC(BaseTaskQC):
             An boolean array the length of trials where True indicates the metric passed the
             criterion.
         """
-        #TODO: implement QC logic here
-        #metric = np.nan_to_num(data['laser_intervals'] - data['intervals'][:, 0], nan=np.inf)
-        #passed = metric > 0
-        #assert data['intervals'].shape[0] == len(metric) == len(passed)
-        return metric, passed
+        t_max = self.extractor.settings['MAX_LASER_TIME']
+        is_opto_trial = ~np.isnan(data['opto_intervals'][:, 0])
+
+        opto_on_length = data['opto_intervals'][:,1] - data['opto_intervals'][:,0]
+        tol = .01 # seconds
+        passed = (opto_on_length < t_max + tol) | ~is_opto_trial # less than t_max
+        passed = passed & ((opto_on_length > 0) | ~is_opto_trial) # greater than zero
+        return opto_on_length, passed
 
 class TrialsOpto(BaseBpodTrialsExtractor):
     var_names = BiasedTrials.var_names + ('opto_intervals',)
