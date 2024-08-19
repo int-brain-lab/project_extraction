@@ -140,5 +140,5 @@ if __name__ == "__main__":
         df_session['session_id'] = session_id
         df_sessions = pd.concat([df_sessions, df_session])
 
-    fpath = Path(__file__).parent.joinpath('neruomodcw_session_templates.pqt')
+    fpath = Path(__file__).parent.joinpath('neuromodcw_session_templates.pqt')
     df_sessions.to_parquet(fpath)
