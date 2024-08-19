@@ -7,6 +7,7 @@ import pandas as pd
 import warnings
 from itertools import cycle
 import argparse
+from pathlib import Path
 
 from iblrig.misc import truncated_exponential, draw_contrast
 
