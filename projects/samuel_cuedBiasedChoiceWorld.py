@@ -1,7 +1,8 @@
 """Task QC for samuel_cuedBiasedChoiceWorld.
 
 The task itself is identical to the biasedChoiceWorld except that there is an interactive delay
-between stimOn and goCue.
+between stimOn and goCue.  Critically, the tone plays **before** the visual stimulus onset and is
+therefore not strictly a 'go cue' tone and the delay is not strictly an 'interactive' one.
 
 Mapping the correct Bpod trials extractor is done in `projects.task_extractor_map.json`. The trial
 alignment to the DAQ remains unchanged. The
@@ -27,7 +28,9 @@ class TaskQC(BaseTaskQC):
         """
         Verify time delay between audio cue and stimOn is ~equal to the INTERACTIVE_DELAY specified.
 
-        Metric: M = stimOn_times - goCue_times - interactive_delay
+        The so-called goCue is expected to occur before the stimulus onset.
+
+        Metric: M = goCue_times - stimOn_times - interactive_delay
         Criteria: 0 < M < 0.010 s
         Units: seconds [s]
 
@@ -55,7 +58,7 @@ class TaskQC(BaseTaskQC):
         # If either are NaN, the result will be Inf to ensure that it crosses the failure threshold.
         threshold = 0.01 if audio_output.lower() == 'harp' else 0.053
         delay = self.extractor.settings['INTERACTIVE_DELAY']
-        metric = np.nan_to_num(data['goCue_times'] - data['stimOn_times'] - delay, nan=np.inf)
+        metric = np.nan_to_num(data['stimOn_times'] - data['goCue_times'] - delay, nan=np.inf)
         passed = (metric < threshold) & (metric > 0)
         assert data['intervals'].shape[0] == len(metric) == len(passed)
         return metric, passed
