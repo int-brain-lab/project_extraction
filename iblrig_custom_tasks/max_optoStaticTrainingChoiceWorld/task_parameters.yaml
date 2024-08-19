@@ -15,6 +15,7 @@
   - reward
 'PROBABILITY_OPTO_STIM': 0.2  # probability of optogenetic stimulation
 'MAX_LASER_TIME': 6.0
+'ESTIMATED_LED_POWER_MW': 2.5
 #'MASK_TTL_STATES': # list of the state machine states where mask stim should be delivered
 #  - trial_start
 #  - delay_initiation

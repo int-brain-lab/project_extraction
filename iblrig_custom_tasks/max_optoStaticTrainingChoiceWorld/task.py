@@ -13,6 +13,7 @@ import sys
 from importlib.util import find_spec
 from pathlib import Path
 from typing import Literal
+import pandas as pd
 
 import numpy as np
 import yaml
@@ -32,6 +33,7 @@ NTRIALS_INIT = 2000
 SOFTCODE_FIRE_LED = max(SOFTCODE).value + 1
 SOFTCODE_RAMP_DOWN_LED = max(SOFTCODE).value + 2
 RAMP_SECONDS = .25 # time to ramp down the opto stim # TODO: make this a parameter
+LED_V_MAX = 5 # maximum voltage for LED control # TODO: make this a parameter
 
 # read defaults from task_parameters.yaml
 with open(Path(__file__).parent.joinpath('task_parameters.yaml')) as f:
@@ -48,6 +50,7 @@ class Session(StaticTrainingChoiceSession, PulsePalMixin):
         opto_ttl_states: list[str] = DEFAULTS['OPTO_TTL_STATES'],
         opto_stop_states: list[str] = DEFAULTS['OPTO_STOP_STATES'],
         max_laser_time: float = DEFAULTS['MAX_LASER_TIME'],
+        estimated_led_power_mW: float = DEFAULTS['ESTIMATED_LED_POWER_MW'],
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -55,7 +58,7 @@ class Session(StaticTrainingChoiceSession, PulsePalMixin):
         self.task_params['OPTO_STOP_STATES'] = opto_stop_states
         self.task_params['PROBABILITY_OPTO_STIM'] = probability_opto_stim
         self.task_params['MAX_LASER_TIME'] = max_laser_time
-
+        self.task_params['LED_POWER'] = estimated_led_power_mW
         # generates the opto stimulation for each trial
         opto = np.random.choice(
                     [0, 1],
@@ -65,7 +68,21 @@ class Session(StaticTrainingChoiceSession, PulsePalMixin):
 
         opto[0] = False
         self.trials_table['opto_stimulation'] = opto
-        log.warning(self.trials_table['opto_stimulation'])
+        
+        # get the calibration values for the LED
+        # TODO: do a calibration curve instead
+        dat = pd.read_csv(r'V:/opto_fiber_calibration_values.csv')
+        l_cannula = f'{kwargs["subject"]}L' #TODO: where is SUBJECT defined?
+        r_cannula = f'{kwargs["subject"]}R'
+        l_cable = 0
+        r_cable = 1
+        l_cal_power = dat[(dat['Cannula'] == l_cannula) & (dat['cable_ID'] == l_cable)].cable_power.values[0]
+        r_cal_power = dat[(dat['Cannula'] == r_cannula) & (dat['cable_ID'] == r_cable)].cable_power.values[0]
+        
+        mean_cal_power = np.mean([l_cal_power, r_cal_power])
+        vmax = LED_V_MAX * self.task_params['LED_POWER'] / mean_cal_power
+        log.warning(f'Using VMAX: {vmax}V for target LED power {self.task_params["LED_POWER"]}mW')
+        self.task_params['VMAX_LED'] = vmax
     
     def _instantiate_state_machine(self, trial_number=None):
         """
@@ -92,11 +109,10 @@ class Session(StaticTrainingChoiceSession, PulsePalMixin):
 
     def arm_opto_stim(self):
         # define a contant offset voltage with a ramp down at the end to avoid rebound excitation
-        # TODO: set the laser power appropriately based on calibration values!
         log.warning('Arming opto stim')
-        ramp = np.linspace(5, 0, 1000) # SET POWER
+        ramp = np.linspace(self.task_params['VMAX_LED'], 0, 1000) # SET POWER
         t = np.linspace(0, RAMP_SECONDS, 1000)
-        v = np.concatenate((np.array([5]), ramp)) # SET POWER
+        v = np.concatenate((np.array([self.task_params['VMAX_LED']]), ramp)) # SET POWER
         t = np.concatenate((np.array([0]), t + self.task_params['MAX_LASER_TIME']))
 
         self.pulsepal_connection.programOutputChannelParam('phase1Duration', 1, self.task_params['MAX_LASER_TIME'])
@@ -112,7 +128,6 @@ class Session(StaticTrainingChoiceSession, PulsePalMixin):
         return self.task_params['MAX_LASER_TIME']
 
     def stop_opto_stim(self):
-        log.warning('Entered stop_opto_stim_function')
         if time.time() - self.opto_start_time >= self.task_params['MAX_LASER_TIME']:
             # the LED should have turned off by now, we don't need to force the ramp down
             log.warning('Stopped opto stim - hit opto timeout')
@@ -125,7 +140,7 @@ class Session(StaticTrainingChoiceSession, PulsePalMixin):
         self.pulsepal_connection.programOutputChannelParam('customTrainID', 2, 2)
         
         # send instructions to ramp the opto stim down to 0
-        v = np.linspace(5, 0, 1000)
+        v = np.linspace(self.task_params['VMAX_LED'], 0, 1000)
         t = np.linspace(0, RAMP_SECONDS, 1000)
         self.pulsepal_connection.programOutputChannelParam('phase1Duration', 1, self.task_params['MAX_LASER_TIME'])
         self.pulsepal_connection.sendCustomPulseTrain(1, t, v)
@@ -178,6 +193,14 @@ class Session(StaticTrainingChoiceSession, PulsePalMixin):
             default=DEFAULTS['MAX_LASER_TIME'],
             type=float,
             help='Maximum laser duration in seconds',
+        )
+        parser.add_argument(
+            '--estimated_led_power_mW',
+            option_strings=['--estimated_led_power_mW'],
+            dest='estimated_led_power_mW',
+            default=DEFAULTS['ESTIMATED_LED_POWER_MW'],
+            type=float,
+            help='The estimated LED power in mW. Computed from a calibration curve'
         )
 
         return parser
