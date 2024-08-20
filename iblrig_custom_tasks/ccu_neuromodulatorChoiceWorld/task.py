@@ -10,6 +10,9 @@ from pybpodapi.protocol import StateMachine
 import logging
 log = logging.getLogger(__name__)
 
+# TODO: add function annotation/ type hinting
+# TODO: come up with a more descriptive protocol name
+
 
 class Session(BiasedChoiceWorldSession):
     protocol_name = '_iblrig_tasks_neuromodulatorChoiceWorld'
@@ -58,6 +61,8 @@ class Session(BiasedChoiceWorldSession):
         return parser
 
     def get_state_machine_trial(self, i):
+        # TODO: check Nate's custom task to see how to edit states instead of
+        # re-defining them all
         sma = StateMachine(self.bpod)
 
         if i == 0:  # First trial exception start camera
@@ -158,7 +163,7 @@ class Session(BiasedChoiceWorldSession):
         # here we create 3 separates states to disambiguate the choice of the mouse
         # in the output data - apart from the name they are exactly the same state
         # TODO: should we keep this averaging of delay times? is the purpose of
-        # this manipulation to completely hide the outcome or jsut omit feedback?
+        # this manipulation to completely hide the outcome or just omit feedback?
         for state_name in ['omit_error', 'omit_correct', 'omit_no_go']:
             sma.add_state(
                 state_name=state_name,
@@ -197,8 +202,6 @@ class Session(BiasedChoiceWorldSession):
         sma.add_state(
             state_name='freeze_reward',
             state_timer=0,
-            # TODO: check this, bonsai_show_center comes from ChoiceWorldSession
-            # output_actions=[self.bpod.actions.bonsai_freeze_stim],
             output_actions=[self.bpod.actions.bonsai_show_center],
             state_change_conditions={'Tup': 'reward'},
         )
@@ -247,7 +250,7 @@ class Session(BiasedChoiceWorldSession):
         # BiasedChoiceWorldSession's use of the block_table
         trial_info = self.trials_table.iloc[self.trial_num]
         level = logging.INFO
-        log.log(level=level, msg=f'Outcome of Trial #{trial_info.trial_num}:')
+        log.log(level=level, msg=f'Outcome of Trial # {trial_info.trial_num}:')
         log.log(level=level, msg=f'- Stim. Position:  {trial_info.position}')
         log.log(level=level, msg=f'- Stim. Contrast:  {trial_info.contrast}')
         log.log(level=level, msg=f'- Stim. Phase:     {trial_info.stim_phase}')
