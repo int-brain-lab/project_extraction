@@ -1,0 +1,52 @@
+// The Great IBL Task
+digraph {
+	a [label=trial_start]
+	b [label=delay_initiation]
+	c [label=reset_rotary_encoder]
+	d [label=quiescent_period]
+	e [label=stim_on]
+	f [label=interactive_delay]
+	g [label=play_tone]
+	h [label=reset2_rotary_encoder]
+	i [label=closed_loop]
+	j [label=omit_error]
+	k [label=omit_correct]
+	l [label=omit_no_go]
+	m [label=no_go]
+	n [label=freeze_error]
+	o [label=error]
+	p [label=freeze_reward]
+	q [label=reward]
+	r [label=correct]
+	s [label=hide_stim]
+	t [label=exit_state]
+	a -> a
+	a -> b
+	b -> c
+	c -> d
+	d -> e
+	d -> c
+	d -> c
+	e -> f
+	e -> f
+	e -> f
+	f -> g
+	g -> h
+	g -> h
+	h -> i
+	i -> m
+	i -> n
+	i -> p
+	j -> s
+	k -> s
+	l -> s
+	m -> t
+	n -> o
+	o -> s
+	p -> q
+	q -> r
+	r -> s
+	s -> t
+	s -> t
+	s -> t
+}

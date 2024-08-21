@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 
 
 class Session(BiasedChoiceWorldSession):
-    protocol_name = '_iblrig_tasks_neuromodulatorChoiceWorld'
+    protocol_name = 'ccu_neuromodulatorChoiceWorld'
 
     def __init__(self, *args, session_template_id=0, **kwargs):
         super().__init__(*args, **kwargs)
@@ -240,6 +240,7 @@ class Session(BiasedChoiceWorldSession):
         # TODO: is this method needed for pre-generated sessions?
         # TODO: pre-generate quiescent period? super has hard-coded parameters...
         self.draw_next_trial_info(
+            pleft=self.trials_table.at[self.trial_num, 'stim_probability_left'],
             contrast=self.trials_table.at[self.trial_num, 'contrast'],
             position=self.trials_table.at[self.trial_num, 'position'],
             reward_amount=self.trials_table.at[self.trial_num, 'reward_amount']
@@ -262,13 +263,24 @@ class Session(BiasedChoiceWorldSession):
         log.log(level=level, msg=f'- Temperature:     {self.ambient_sensor_table.loc[self.trial_num, "Temperature_C"]:.1f} °C')
         log.log(level=level, msg=f'- Air Pressure:    {self.ambient_sensor_table.loc[self.trial_num, "AirPressure_mb"]:.1f} mb')
         log.log(level=level, msg=f'- Rel. Humidity:   {self.ambient_sensor_table.loc[self.trial_num, "RelativeHumidity"]:.1f} %\n')
-        # TODO: add block number info as in BiasedChoiceWorldSession
+        # # TODO: add block number info as in BiasedChoiceWorldSession
+        #     trial_info = self.trials_table.iloc[self.trial_num]
+        #     extra_info = f"""
+        # RESPONSE TIME:        {trial_info.response_time}
+        # {extra_info}
+        #
+        # TRIAL CORRECT:        {trial_info.trial_correct}
+        # NTRIALS CORRECT:      {self.session_info.NTRIALS_CORRECT}
+        # NTRIALS ERROR:        {self.trial_num - self.session_info.NTRIALS_CORRECT}
+        #         """
+        # super().show_trial_log(extra_info=extra_info)
 
     @property
     def omit_feedback(self):
         # TODO: needs to be a pre-generated parameter
         # return self.trials_table.at[self.trial_num, 'omit_feedback']
         return False
+
 
 if __name__ == '__main__':  # pragma: no cover
     kwargs = get_task_arguments(parents=[Session.extra_parser()])
