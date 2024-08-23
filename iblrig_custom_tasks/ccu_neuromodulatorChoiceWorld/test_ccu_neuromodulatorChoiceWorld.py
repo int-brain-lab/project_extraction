@@ -42,8 +42,7 @@ class TestCCU(BaseTestCases.CommonTestInstantiateTask):
                 self.assertTrue(task.trials_table['trial_correct'][task.trial_num])
             else:
                 # fixme here we should init the trials table with nan
-                # self.assertFalse(task.trials_table['trial_correct'][task.trial_num])
-                pass
+                self.assertFalse(task.trials_table['trial_correct'][task.trial_num])
 
             if i == 245:
                 task.show_trial_log()

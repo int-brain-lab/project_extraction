@@ -142,3 +142,4 @@ if __name__ == "__main__":
 
     fpath = Path(__file__).parent.joinpath('neuromodcw_session_templates.pqt')
     df_sessions.to_parquet(fpath)
+    print(fpath)

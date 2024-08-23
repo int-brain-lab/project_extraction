@@ -21,10 +21,10 @@ class Session(BiasedChoiceWorldSession):
         super().__init__(*args, **kwargs)
         self.task_params.SESSION_TEMPLATE_ID = session_template_id
         # TODO: need to check that same session is not repeated for same mouse?
-        self.trials_table = self.get_session_template(session_template_id)
-        # TODO: need to finish implementing reward omission
-        #self.trials_table['omit_feedback'] = np.zeros(self.trials_table.shape[0], dtype=bool)
-        # TODO: implement block_table as in BiasedChoiceWorldSession?
+        df_template = self.get_session_template(session_template_id)
+        self.trials_table = df_template.merge(self.trials_table, how='outer')
+        self.trials_table['omit_feedback'] = np.zeros(self.trials_table.shape[0], dtype=bool)
+        # TODO: label the blocks in the trials table at table generation
 
     @staticmethod
     def get_session_template(session_template_id):
@@ -137,6 +137,19 @@ class Session(BiasedChoiceWorldSession):
         )
 
         if self.omit_feedback:
+            for state_name in ['omit_error', 'omit_correct', 'omit_no_go']:
+                sma.add_state(
+                    state_name=state_name,
+                    state_timer=(
+                                        self.task_params.FEEDBACK_NOGO_DELAY_SECS
+                                        + self.task_params.FEEDBACK_ERROR_DELAY_SECS
+                                        + self.task_params.FEEDBACK_CORRECT_DELAY_SECS
+                                )
+                                / 3,
+                    # TODO: check if we want to freeze stim here
+                    output_actions=[self.bpod.actions.bonsai_freeze_stim],
+                    state_change_conditions={'Tup': 'hide_stim'},
+                )
             # same as normal closed loop state, but transistions to states that
             # allow to skip feedback states
             sma.add_state(
@@ -148,6 +161,7 @@ class Session(BiasedChoiceWorldSession):
                     self.event_error: 'omit_error',
                     self.event_reward: 'omit_correct'},
             )
+
         else:
             sma.add_state(
                 state_name='closed_loop',
@@ -158,24 +172,6 @@ class Session(BiasedChoiceWorldSession):
                     self.event_error: 'freeze_error',
                     self.event_reward: 'freeze_reward',
                 },
-            )
-
-        # here we create 3 separates states to disambiguate the choice of the mouse
-        # in the output data - apart from the name they are exactly the same state
-        # TODO: should we keep this averaging of delay times? is the purpose of
-        # this manipulation to completely hide the outcome or just omit feedback?
-        for state_name in ['omit_error', 'omit_correct', 'omit_no_go']:
-            sma.add_state(
-                state_name=state_name,
-                state_timer=(
-                    self.task_params.FEEDBACK_NOGO_DELAY_SECS
-                    + self.task_params.FEEDBACK_ERROR_DELAY_SECS
-                    + self.task_params.FEEDBACK_CORRECT_DELAY_SECS
-                )
-                / 3,
-                # TODO: check if we want to freeze stim here
-                output_actions=[self.bpod.actions.bonsai_freeze_stim],
-                state_change_conditions={'Tup': 'hide_stim'},
             )
 
         sma.add_state(
@@ -237,8 +233,7 @@ class Session(BiasedChoiceWorldSession):
 
     def next_trial(self):
         self.trial_num += 1
-        # TODO: is this method needed for pre-generated sessions?
-        # TODO: pre-generate quiescent period? super has hard-coded parameters...
+        # TODO: quiescent period should be overloadable
         self.draw_next_trial_info(
             pleft=self.trials_table.at[self.trial_num, 'stim_probability_left'],
             contrast=self.trials_table.at[self.trial_num, 'contrast'],
