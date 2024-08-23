@@ -9,17 +9,14 @@ digraph {
 	g [label=play_tone]
 	h [label=reset2_rotary_encoder]
 	i [label=closed_loop]
-	j [label=omit_error]
-	k [label=omit_correct]
-	l [label=omit_no_go]
-	m [label=no_go]
-	n [label=freeze_error]
-	o [label=error]
-	p [label=freeze_reward]
-	q [label=reward]
-	r [label=correct]
-	s [label=hide_stim]
-	t [label=exit_state]
+	j [label=no_go]
+	k [label=freeze_error]
+	l [label=error]
+	m [label=freeze_reward]
+	n [label=reward]
+	o [label=correct]
+	p [label=hide_stim]
+	q [label=exit_state]
 	a -> a
 	a -> b
 	b -> c
@@ -34,19 +31,16 @@ digraph {
 	g -> h
 	g -> h
 	h -> i
+	i -> j
+	i -> k
 	i -> m
-	i -> n
-	i -> p
-	j -> s
-	k -> s
-	l -> s
-	m -> t
+	j -> q
+	k -> l
+	l -> p
+	m -> n
 	n -> o
-	o -> s
+	o -> p
 	p -> q
-	q -> r
-	r -> s
-	s -> t
-	s -> t
-	s -> t
+	p -> q
+	p -> q
 }
