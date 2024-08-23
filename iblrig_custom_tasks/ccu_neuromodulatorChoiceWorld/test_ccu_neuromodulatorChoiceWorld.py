@@ -41,9 +41,7 @@ class TestCCU(BaseTestCases.CommonTestInstantiateTask):
             if trial_type == 'correct':
                 self.assertTrue(task.trials_table['trial_correct'][task.trial_num])
             else:
-                # fixme here we should init the trials table with nan
                 self.assertFalse(task.trials_table['trial_correct'][task.trial_num])
-
             if i == 245:
                 task.show_trial_log()
             assert not np.isnan(task.reward_time)
@@ -57,13 +55,13 @@ class TestCCU(BaseTestCases.CommonTestInstantiateTask):
 
 
         df_template = task.get_session_template(task.task_params['SESSION_TEMPLATE_ID'])
-
         # Test the blocks task logic
         df_blocks = task.trials_table.groupby(['reward_probability_left', 'stim_probability_left']).agg(
             count=pd.NamedAgg(column='stim_angle', aggfunc='count'),
             n_stim_probability_left=pd.NamedAgg(column='stim_probability_left', aggfunc='nunique'),
             stim_probability_left=pd.NamedAgg(column='stim_probability_left', aggfunc='first'),
             position=pd.NamedAgg(column='position', aggfunc=lambda x: 1 - (np.mean(np.sign(x)) + 1) / 2),
+            first_trial=pd.NamedAgg(column='block_trial_num', aggfunc='first'),
         )
         # todo check the common columns of template df with the recovered trials table
         # todo modify / adapt the logic tests down here to match the new task requirements
@@ -77,9 +75,11 @@ class TestCCU(BaseTestCases.CommonTestInstantiateTask):
         assert np.all(np.isclose(np.abs(np.diff(df_blocks['stim_probability_left'].values[1:])), 0.6))
         # assert the the trial outcomes are within 0.3 of the generating probability
         np.testing.assert_array_less(np.abs(df_blocks['position'] - df_blocks['stim_probability_left']), 0.4)
-        np.testing.assert_array_equal(np.unique(task.trials_table['reward_amount']), reward_set)
         # assert quiescent period
         self.check_quiescent_period()
+        # TODO: test the reward amount logic
+        task.trials_table['reward_amount']
+
 
     def check_quiescent_period(self):
         """

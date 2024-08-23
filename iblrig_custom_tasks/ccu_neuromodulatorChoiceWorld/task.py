@@ -18,12 +18,13 @@ class Session(BiasedChoiceWorldSession):
     protocol_name = 'ccu_neuromodulatorChoiceWorld'
 
     def __init__(self, *args, session_template_id=0, **kwargs):
+        df_template = self.get_session_template(session_template_id)
         super().__init__(*args, **kwargs)
         self.task_params.SESSION_TEMPLATE_ID = session_template_id
         # TODO: need to check that same session is not repeated for same mouse?
-        df_template = self.get_session_template(session_template_id)
-        self.trials_table = df_template.merge(self.trials_table, how='outer')
-        self.trials_table['omit_feedback'] = np.zeros(self.trials_table.shape[0], dtype=bool)
+        for c in df_template.columns:
+            self.trials_table[c] = df_template[c]
+        # TODO populate the omit_feedback in the parquet construction
         # TODO: label the blocks in the trials table at table generation
 
     @staticmethod
