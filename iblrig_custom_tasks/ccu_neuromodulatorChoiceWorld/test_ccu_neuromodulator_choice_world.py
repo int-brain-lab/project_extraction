@@ -2,10 +2,12 @@
 Here we test for the state machine code and the task to be importable by the GUI
 """
 import time
+import unittest
 
 import numpy as np
 import pandas as pd
 
+from iblrig_custom_tasks.ccu_neuromodulatorChoiceWorld.session_creator import make_neuromodcw_session
 from iblrig.test.base import BaseTestCases
 from iblrig.test.tasks.test_biased_choice_world_family import get_fixtures
 from iblrig_custom_tasks.ccu_neuromodulatorChoiceWorld.task import Session as NeuromodulatorChoiceWorldSession
@@ -49,19 +51,16 @@ class TestCCU(BaseTestCases.CommonTestInstantiateTask):
 
         df_template = task.get_session_template(task.task_params['SESSION_TEMPLATE_ID'])
         # Test the blocks task logic
-        df_blocks = task.trials_table.groupby(['reward_probability_left', 'stim_probability_left']).agg(
+        df_blocks = task.trials_table.groupby(['rich_probability_left', 'stim_probability_left']).agg(
             count=pd.NamedAgg(column='stim_angle', aggfunc='count'),
             n_stim_probability_left=pd.NamedAgg(column='stim_probability_left', aggfunc='nunique'),
             stim_probability_left=pd.NamedAgg(column='stim_probability_left', aggfunc='first'),
             position=pd.NamedAgg(column='position', aggfunc=lambda x: 1 - (np.mean(np.sign(x)) + 1) / 2),
-            first_trial=pd.NamedAgg(column='block_trial_num', aggfunc='first'),
         )
         # todo check the common columns of template df with the recovered trials table
         # todo modify / adapt the logic tests down here to match the new task requirements
         # test that the first block is 90 trials
         assert df_blocks['count'].values[0] == 90
-        # make all first block trials were reset to 0
-        assert np.all(df_blocks['first_trial'] == 0)
         # test that the first block has 50/50 probability
         assert df_blocks['stim_probability_left'].values[0] == 0.5
         # make sure that all subsequent blocks alternate between 0.2 and 0.8 left probability
@@ -89,3 +88,9 @@ class TestCCU(BaseTestCases.CommonTestInstantiateTask):
         self.assertTrue(np.all(self.task.trials_table['quiescent_period'] >= 0.4))
         self.assertTrue(np.all(self.task.trials_table['quiescent_period'] <= 0.7))
         self.assertAlmostEqual(self.task.trials_table['quiescent_period'].mean() - 0.2, 0.35, delta=0.05)
+
+
+class TestTaskCreation(unittest.TestCase):
+    def test_create_session(self):
+        df_session = make_neuromodcw_session()
+        assert df_session.shape[0] == 2000

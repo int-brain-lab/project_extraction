@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from iblrig.base_choice_world import BiasedChoiceWorldSession
+from iblrig.base_choice_world import BiasedChoiceWorldSession, ActiveChoiceWorldSession
 from iblrig.hardware import SOFTCODE
 from iblrig.misc import get_task_arguments
 from pybpodapi.protocol import StateMachine
@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 # TODO: come up with a more descriptive protocol name
 
 
-class Session(BiasedChoiceWorldSession):
+class Session(ActiveChoiceWorldSession):
     protocol_name = 'ccu_neuromodulatorChoiceWorld'
 
     def __init__(self, *args, session_template_id=0, **kwargs):
@@ -244,9 +244,7 @@ class Session(BiasedChoiceWorldSession):
 
     def show_trial_log(self, extra_info=''):
         trial_info = self.trials_table.iloc[self.trial_num]
-        extra_info = f"""
-        RICH PROBABILITY:     {trial_info.rich_probability_left}
-                """
+        extra_info = f"""RICH PROBABILITY:     {trial_info.rich_probability_left}"""
         super().show_trial_log(extra_info=extra_info)
 
     @property

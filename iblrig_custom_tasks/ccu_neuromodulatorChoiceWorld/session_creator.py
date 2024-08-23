@@ -1,6 +1,8 @@
 """
 Creates sessions, pre-generates stim and ephys sessions
 """
+import pandas as pd
+import numpy as np
 
 import argparse
 import warnings
@@ -8,7 +10,7 @@ from itertools import cycle
 from pathlib import Path
 
 from iblrig.misc import truncated_exponential, draw_contrast
-from iblrig,base_choice_world import NTRIALS_INIT
+from iblrig.base_choice_world import NTRIALS_INIT
 
 from iblrig.misc import draw_contrast, truncated_exponential
 
@@ -125,8 +127,8 @@ def make_neuromodcw_session(rng=None):
     trials[:, 2] = np.abs(trials[:, 2])
     return pd.DataFrame(trials, columns=TRIALS_TABLE_COLUMNS)
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-n', '--n_sessions', type=int, default=1)
     # TODO: contrast and block length draw need to take an rng for this to sense
