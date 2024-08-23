@@ -1,13 +1,13 @@
-import numpy as np
-import pandas as pd
+import logging
 from pathlib import Path
 
-from iblrig.misc import truncated_exponential, get_task_arguments
+import pandas as pd
+
 from iblrig.base_choice_world import BiasedChoiceWorldSession
 from iblrig.hardware import SOFTCODE
+from iblrig.misc import get_task_arguments
 from pybpodapi.protocol import StateMachine
 
-import logging
 log = logging.getLogger(__name__)
 
 # TODO: add function annotation/ type hinting
@@ -243,33 +243,11 @@ class Session(BiasedChoiceWorldSession):
         )
 
     def show_trial_log(self, extra_info=''):
-        # this is copied from ChoiceWorldSession to override parent
-        # BiasedChoiceWorldSession's use of the block_table
         trial_info = self.trials_table.iloc[self.trial_num]
-        level = logging.INFO
-        log.log(level=level, msg=f'Outcome of Trial # {trial_info.trial_num}:')
-        log.log(level=level, msg=f'- Stim. Position:  {trial_info.position}')
-        log.log(level=level, msg=f'- Stim. Contrast:  {trial_info.contrast}')
-        log.log(level=level, msg=f'- Stim. Phase:     {trial_info.stim_phase}')
-        log.log(level=level, msg=f'- Stim. p Left:    {trial_info.stim_probability_left}')
-        log.log(level=level, msg=f'- Rew. amount:     {trial_info.reward_amount}')
-        log.log(level=level, msg=f'- 3uL Rew. p Left: {trial_info.reward_probability_left}')
-        log.log(level=level, msg=f'- Water delivered: {self.session_info.TOTAL_WATER_DELIVERED:.1f} µl')
-        log.log(level=level, msg=f'- Time from Start: {self.time_elapsed}')
-        log.log(level=level, msg=f'- Temperature:     {self.ambient_sensor_table.loc[self.trial_num, "Temperature_C"]:.1f} °C')
-        log.log(level=level, msg=f'- Air Pressure:    {self.ambient_sensor_table.loc[self.trial_num, "AirPressure_mb"]:.1f} mb')
-        log.log(level=level, msg=f'- Rel. Humidity:   {self.ambient_sensor_table.loc[self.trial_num, "RelativeHumidity"]:.1f} %\n')
-        # # TODO: add block number info as in BiasedChoiceWorldSession
-        #     trial_info = self.trials_table.iloc[self.trial_num]
-        #     extra_info = f"""
-        # RESPONSE TIME:        {trial_info.response_time}
-        # {extra_info}
-        #
-        # TRIAL CORRECT:        {trial_info.trial_correct}
-        # NTRIALS CORRECT:      {self.session_info.NTRIALS_CORRECT}
-        # NTRIALS ERROR:        {self.trial_num - self.session_info.NTRIALS_CORRECT}
-        #         """
-        # super().show_trial_log(extra_info=extra_info)
+        extra_info = f"""
+        RICH PROBABILITY:     {trial_info.rich_probability_left}
+                """
+        super().show_trial_log(extra_info=extra_info)
 
     @property
     def omit_feedback(self):

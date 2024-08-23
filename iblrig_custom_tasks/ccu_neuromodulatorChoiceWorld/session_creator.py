@@ -2,15 +2,15 @@
 Creates sessions, pre-generates stim and ephys sessions
 """
 
-import numpy as np
-import pandas as pd
+import argparse
 import warnings
 from itertools import cycle
-import argparse
 from pathlib import Path
 
 from iblrig.misc import truncated_exponential, draw_contrast
 from iblrig,base_choice_world import NTRIALS_INIT
+
+from iblrig.misc import draw_contrast, truncated_exponential
 
 # TODO: add these to a parameters file, save session table with parameters!
 CONTRAST_LEVELS = [1.0, 0.25, 0.125, 0.0625, 0.0]

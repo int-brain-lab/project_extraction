@@ -1,21 +1,14 @@
 """
 Here we test for the state machine code and the task to be importable by the GUI
 """
-from iblrig_custom_tasks.ccu_neuromodulatorChoiceWorld.task import Session as NeuromodulatorChoiceWorldSession
-
-import datetime
 import time
 
 import numpy as np
 import pandas as pd
 
-from iblrig.raw_data_loaders import load_task_jsonable
-from iblrig.test.base import PATH_FIXTURES, BaseTestCases, IntegrationFullRuns
+from iblrig.test.base import BaseTestCases
 from iblrig.test.tasks.test_biased_choice_world_family import get_fixtures
-from iblrig_tasks._iblrig_tasks_biasedChoiceWorld.task import Session as BiasedChoiceWorldSession
-from iblrig_tasks._iblrig_tasks_ephysChoiceWorld.task import Session as EphysChoiceWorldSession
-from iblrig_tasks._iblrig_tasks_ImagingChoiceWorld.task import Session as ImagingChoiceWorldSession
-from iblrig_tasks._iblrig_tasks_neuroModulatorChoiceWorld.task import Session as NeuroModulatorChoiceWorldSession
+from iblrig_custom_tasks.ccu_neuromodulatorChoiceWorld.task import Session as NeuromodulatorChoiceWorldSession
 
 
 class TestCCU(BaseTestCases.CommonTestInstantiateTask):
