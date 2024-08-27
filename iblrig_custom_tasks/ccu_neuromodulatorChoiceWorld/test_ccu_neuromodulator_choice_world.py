@@ -19,9 +19,7 @@ class TestCCU(BaseTestCases.CommonTestInstantiateTask):
         self.task = NeuromodulatorChoiceWorldSession(**self.task_kwargs)
         np.random.seed(12345)
 
-    def test_task(self, reward_set: np.ndarray | None = None):
-        if reward_set is None:
-            reward_set = np.array([0, 1.5])
+    def test_task(self):
         task = self.task
         task.create_session()
         trial_fixtures = get_fixtures()
