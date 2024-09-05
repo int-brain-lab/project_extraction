@@ -3,9 +3,12 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import yaml
+#import logging
 
 import iblrig.misc
 from iblrig.base_choice_world import NTRIALS_INIT, ActiveChoiceWorldSession
+
+#log = logging.getLogger('iblrig.task')
 
 # read defaults from task_parameters.yaml
 with open(Path(__file__).parent.joinpath('task_parameters.yaml')) as f:
@@ -36,6 +39,7 @@ class Session(ActiveChoiceWorldSession):
         position_set: list[float] = DEFAULTS['POSITION_SET'],
         stim_gain: float = DEFAULTS['STIM_GAIN'],
         stim_reverse: float = DEFAULTS['STIM_REVERSE'],
+        feedback_error_delay_secs: float = DEFAULTS['FEEDBACK_ERROR_DELAY_SECS'],
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -49,6 +53,7 @@ class Session(ActiveChoiceWorldSession):
         self.task_params['POSITION_SET'] = position_set
         self.task_params['STIM_GAIN'] = stim_gain
         self.task_params['STIM_REVERSE'] = stim_reverse
+        self.task_params['FEEDBACK_ERROR_DELAY_SECS'] = feedback_error_delay_secs # make the punishment timeout a parameter
         # it is easier to work with parameters as a dataframe
         self.df_contingencies = pd.DataFrame(columns=['contrast', 'probability', 'reward_amount_ul', 'position'])
         self.df_contingencies['contrast'] = contrast_set
@@ -110,6 +115,14 @@ class Session(ActiveChoiceWorldSession):
             nargs='+',
             type=float,
             help='Reward for contrast in contrast set.',
+        )
+        parser.add_argument(
+            '--feedback_error_delay_secs',
+            option_strings=['--feedback_error_delay_secs'],
+            dest='feedback_error_delay_secs',
+            default=DEFAULTS['FEEDBACK_ERROR_DELAY_SECS'],
+            type=float,
+            help='The punishment timeout duration (s) for incorrect choice trials',
         )
         parser.add_argument(
             '--position_set',
