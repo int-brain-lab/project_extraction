@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 
 
 class Session(ActiveChoiceWorldSession):
-    protocol_name = 'ccu_neuromodulatorChoiceWorld'
+    protocol_name = 'ccu_rewardbias'
 
     def __init__(self, *args, session_template_id=0, **kwargs):
         df_template = self.get_session_template(session_template_id)
