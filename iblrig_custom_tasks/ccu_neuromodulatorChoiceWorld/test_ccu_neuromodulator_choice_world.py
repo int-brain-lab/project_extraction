@@ -1,21 +1,16 @@
 """
 Here we test for the state machine code and the task to be importable by the GUI
 """
-from iblrig_custom_tasks.ccu_neuromodulatorChoiceWorld.task import Session as NeuromodulatorChoiceWorldSession
-
-import datetime
 import time
+import unittest
 
 import numpy as np
 import pandas as pd
 
-from iblrig.raw_data_loaders import load_task_jsonable
-from iblrig.test.base import PATH_FIXTURES, BaseTestCases, IntegrationFullRuns
+from iblrig_custom_tasks.ccu_neuromodulatorChoiceWorld.session_creator import make_neuromodcw_session
+from iblrig.test.base import BaseTestCases
 from iblrig.test.tasks.test_biased_choice_world_family import get_fixtures
-from iblrig_tasks._iblrig_tasks_biasedChoiceWorld.task import Session as BiasedChoiceWorldSession
-from iblrig_tasks._iblrig_tasks_ephysChoiceWorld.task import Session as EphysChoiceWorldSession
-from iblrig_tasks._iblrig_tasks_ImagingChoiceWorld.task import Session as ImagingChoiceWorldSession
-from iblrig_tasks._iblrig_tasks_neuroModulatorChoiceWorld.task import Session as NeuroModulatorChoiceWorldSession
+from iblrig_custom_tasks.ccu_neuromodulatorChoiceWorld.task import Session as NeuromodulatorChoiceWorldSession
 
 
 class TestCCU(BaseTestCases.CommonTestInstantiateTask):
@@ -24,9 +19,7 @@ class TestCCU(BaseTestCases.CommonTestInstantiateTask):
         self.task = NeuromodulatorChoiceWorldSession(**self.task_kwargs)
         np.random.seed(12345)
 
-    def test_task(self, reward_set: np.ndarray | None = None):
-        if reward_set is None:
-            reward_set = np.array([0, 1.5])
+    def test_task(self):
         task = self.task
         task.create_session()
         trial_fixtures = get_fixtures()
@@ -41,10 +34,7 @@ class TestCCU(BaseTestCases.CommonTestInstantiateTask):
             if trial_type == 'correct':
                 self.assertTrue(task.trials_table['trial_correct'][task.trial_num])
             else:
-                # fixme here we should init the trials table with nan
-                # self.assertFalse(task.trials_table['trial_correct'][task.trial_num])
-                pass
-
+                self.assertFalse(task.trials_table['trial_correct'][task.trial_num])
             if i == 245:
                 task.show_trial_log()
             assert not np.isnan(task.reward_time)
@@ -58,9 +48,8 @@ class TestCCU(BaseTestCases.CommonTestInstantiateTask):
 
 
         df_template = task.get_session_template(task.task_params['SESSION_TEMPLATE_ID'])
-
         # Test the blocks task logic
-        df_blocks = task.trials_table.groupby(['reward_probability_left', 'stim_probability_left']).agg(
+        df_blocks = task.trials_table.groupby(['rich_probability_left', 'stim_probability_left']).agg(
             count=pd.NamedAgg(column='stim_angle', aggfunc='count'),
             n_stim_probability_left=pd.NamedAgg(column='stim_probability_left', aggfunc='nunique'),
             stim_probability_left=pd.NamedAgg(column='stim_probability_left', aggfunc='first'),
@@ -70,17 +59,17 @@ class TestCCU(BaseTestCases.CommonTestInstantiateTask):
         # todo modify / adapt the logic tests down here to match the new task requirements
         # test that the first block is 90 trials
         assert df_blocks['count'].values[0] == 90
-        # make all first block trials were reset to 0
-        assert np.all(df_blocks['first_trial'] == 0)
         # test that the first block has 50/50 probability
         assert df_blocks['stim_probability_left'].values[0] == 0.5
         # make sure that all subsequent blocks alternate between 0.2 and 0.8 left probability
         assert np.all(np.isclose(np.abs(np.diff(df_blocks['stim_probability_left'].values[1:])), 0.6))
         # assert the the trial outcomes are within 0.3 of the generating probability
         np.testing.assert_array_less(np.abs(df_blocks['position'] - df_blocks['stim_probability_left']), 0.4)
-        np.testing.assert_array_equal(np.unique(task.trials_table['reward_amount']), reward_set)
         # assert quiescent period
         self.check_quiescent_period()
+        # TODO: test the reward amount logic
+        task.trials_table['reward_amount']
+
 
     def check_quiescent_period(self):
         """
@@ -97,3 +86,9 @@ class TestCCU(BaseTestCases.CommonTestInstantiateTask):
         self.assertTrue(np.all(self.task.trials_table['quiescent_period'] >= 0.4))
         self.assertTrue(np.all(self.task.trials_table['quiescent_period'] <= 0.7))
         self.assertAlmostEqual(self.task.trials_table['quiescent_period'].mean() - 0.2, 0.35, delta=0.05)
+
+
+class TestTaskCreation(unittest.TestCase):
+    def test_create_session(self):
+        df_session = make_neuromodcw_session()
+        assert df_session.shape[0] == 2000

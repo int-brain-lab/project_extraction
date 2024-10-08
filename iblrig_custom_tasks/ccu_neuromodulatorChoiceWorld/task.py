@@ -1,30 +1,31 @@
-import numpy as np
-import pandas as pd
+import logging
 from pathlib import Path
 
-from iblrig.misc import truncated_exponential, get_task_arguments
-from iblrig.base_choice_world import BiasedChoiceWorldSession
+import pandas as pd
+
+from iblrig.base_choice_world import BiasedChoiceWorldSession, ActiveChoiceWorldSession
 from iblrig.hardware import SOFTCODE
+from iblrig.misc import get_task_arguments
 from pybpodapi.protocol import StateMachine
 
-import logging
 log = logging.getLogger(__name__)
 
 # TODO: add function annotation/ type hinting
 # TODO: come up with a more descriptive protocol name
 
 
-class Session(BiasedChoiceWorldSession):
-    protocol_name = 'ccu_neuromodulatorChoiceWorld'
+class Session(ActiveChoiceWorldSession):
+    protocol_name = 'ccu_rewardbias'
 
     def __init__(self, *args, session_template_id=0, **kwargs):
+        df_template = self.get_session_template(session_template_id)
         super().__init__(*args, **kwargs)
         self.task_params.SESSION_TEMPLATE_ID = session_template_id
         # TODO: need to check that same session is not repeated for same mouse?
-        self.trials_table = self.get_session_template(session_template_id)
-        # TODO: need to finish implementing reward omission
-        #self.trials_table['omit_feedback'] = np.zeros(self.trials_table.shape[0], dtype=bool)
-        # TODO: implement block_table as in BiasedChoiceWorldSession?
+        for c in df_template.columns:
+            self.trials_table[c] = df_template[c]
+        # TODO populate the omit_feedback in the parquet construction
+        # TODO: label the blocks in the trials table at table generation
 
     @staticmethod
     def get_session_template(session_template_id):
@@ -137,6 +138,19 @@ class Session(BiasedChoiceWorldSession):
         )
 
         if self.omit_feedback:
+            for state_name in ['omit_error', 'omit_correct', 'omit_no_go']:
+                sma.add_state(
+                    state_name=state_name,
+                    state_timer=(
+                                        self.task_params.FEEDBACK_NOGO_DELAY_SECS
+                                        + self.task_params.FEEDBACK_ERROR_DELAY_SECS
+                                        + self.task_params.FEEDBACK_CORRECT_DELAY_SECS
+                                )
+                                / 3,
+                    # TODO: check if we want to freeze stim here
+                    output_actions=[self.bpod.actions.bonsai_freeze_stim],
+                    state_change_conditions={'Tup': 'hide_stim'},
+                )
             # same as normal closed loop state, but transistions to states that
             # allow to skip feedback states
             sma.add_state(
@@ -148,6 +162,7 @@ class Session(BiasedChoiceWorldSession):
                     self.event_error: 'omit_error',
                     self.event_reward: 'omit_correct'},
             )
+
         else:
             sma.add_state(
                 state_name='closed_loop',
@@ -158,24 +173,6 @@ class Session(BiasedChoiceWorldSession):
                     self.event_error: 'freeze_error',
                     self.event_reward: 'freeze_reward',
                 },
-            )
-
-        # here we create 3 separates states to disambiguate the choice of the mouse
-        # in the output data - apart from the name they are exactly the same state
-        # TODO: should we keep this averaging of delay times? is the purpose of
-        # this manipulation to completely hide the outcome or just omit feedback?
-        for state_name in ['omit_error', 'omit_correct', 'omit_no_go']:
-            sma.add_state(
-                state_name=state_name,
-                state_timer=(
-                    self.task_params.FEEDBACK_NOGO_DELAY_SECS
-                    + self.task_params.FEEDBACK_ERROR_DELAY_SECS
-                    + self.task_params.FEEDBACK_CORRECT_DELAY_SECS
-                )
-                / 3,
-                # TODO: check if we want to freeze stim here
-                output_actions=[self.bpod.actions.bonsai_freeze_stim],
-                state_change_conditions={'Tup': 'hide_stim'},
             )
 
         sma.add_state(
@@ -237,8 +234,7 @@ class Session(BiasedChoiceWorldSession):
 
     def next_trial(self):
         self.trial_num += 1
-        # TODO: is this method needed for pre-generated sessions?
-        # TODO: pre-generate quiescent period? super has hard-coded parameters...
+        # TODO: quiescent period should be overloadable
         self.draw_next_trial_info(
             pleft=self.trials_table.at[self.trial_num, 'stim_probability_left'],
             contrast=self.trials_table.at[self.trial_num, 'contrast'],
@@ -247,33 +243,9 @@ class Session(BiasedChoiceWorldSession):
         )
 
     def show_trial_log(self, extra_info=''):
-        # this is copied from ChoiceWorldSession to override parent
-        # BiasedChoiceWorldSession's use of the block_table
         trial_info = self.trials_table.iloc[self.trial_num]
-        level = logging.INFO
-        log.log(level=level, msg=f'Outcome of Trial # {trial_info.trial_num}:')
-        log.log(level=level, msg=f'- Stim. Position:  {trial_info.position}')
-        log.log(level=level, msg=f'- Stim. Contrast:  {trial_info.contrast}')
-        log.log(level=level, msg=f'- Stim. Phase:     {trial_info.stim_phase}')
-        log.log(level=level, msg=f'- Stim. p Left:    {trial_info.stim_probability_left}')
-        log.log(level=level, msg=f'- Rew. amount:     {trial_info.reward_amount}')
-        log.log(level=level, msg=f'- 3uL Rew. p Left: {trial_info.reward_probability_left}')
-        log.log(level=level, msg=f'- Water delivered: {self.session_info.TOTAL_WATER_DELIVERED:.1f} µl')
-        log.log(level=level, msg=f'- Time from Start: {self.time_elapsed}')
-        log.log(level=level, msg=f'- Temperature:     {self.ambient_sensor_table.loc[self.trial_num, "Temperature_C"]:.1f} °C')
-        log.log(level=level, msg=f'- Air Pressure:    {self.ambient_sensor_table.loc[self.trial_num, "AirPressure_mb"]:.1f} mb')
-        log.log(level=level, msg=f'- Rel. Humidity:   {self.ambient_sensor_table.loc[self.trial_num, "RelativeHumidity"]:.1f} %\n')
-        # # TODO: add block number info as in BiasedChoiceWorldSession
-        #     trial_info = self.trials_table.iloc[self.trial_num]
-        #     extra_info = f"""
-        # RESPONSE TIME:        {trial_info.response_time}
-        # {extra_info}
-        #
-        # TRIAL CORRECT:        {trial_info.trial_correct}
-        # NTRIALS CORRECT:      {self.session_info.NTRIALS_CORRECT}
-        # NTRIALS ERROR:        {self.trial_num - self.session_info.NTRIALS_CORRECT}
-        #         """
-        # super().show_trial_log(extra_info=extra_info)
+        extra_info = f"""RICH PROBABILITY:     {trial_info.rich_probability_left}"""
+        super().show_trial_log(extra_info=extra_info)
 
     @property
     def omit_feedback(self):

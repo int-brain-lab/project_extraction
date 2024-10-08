@@ -1,15 +1,18 @@
 """
 Creates sessions, pre-generates stim and ephys sessions
 """
-
-import numpy as np
 import pandas as pd
+import numpy as np
+
+import argparse
 import warnings
 from itertools import cycle
-import argparse
 from pathlib import Path
 
 from iblrig.misc import truncated_exponential, draw_contrast
+from iblrig.base_choice_world import NTRIALS_INIT
+
+from iblrig.misc import draw_contrast, truncated_exponential
 
 # TODO: add these to a parameters file, save session table with parameters!
 CONTRAST_LEVELS = [1.0, 0.25, 0.125, 0.0625, 0.0]
@@ -23,10 +26,9 @@ BLOCK_LENGTH_UNBIASED = 90
 BLOCK_LENGTH_SCALE = 60
 BLOCK_LENGTH_MIN = 20
 BLOCK_LENGTH_MAX = 100
-SESSION_LENGTH_MAX = 2000
 
 TRIALS_TABLE_COLUMNS = [
-    'contrast', 'position', 'reward_amount', 'stim_probability_left', 'reward_probability_left'
+    'contrast', 'position', 'reward_amount', 'stim_probability_left', 'rich_probability_left'
 ]
 
 
@@ -66,7 +68,7 @@ def make_neuromodcw_session(rng=None):
         rng = np.random.default_rng()
     rng.shuffle(trials_unbiased)  # only shuffles on the first dimension
     # create full trials array for session
-    trials = np.full((SESSION_LENGTH_MAX, conditions.shape[1]), np.nan)
+    trials = np.full((NTRIALS_INIT, conditions.shape[1]), np.nan)
     trials[:BLOCK_LENGTH_UNBIASED] = trials_unbiased
     # draw constrasts randomly to fill remaining trials
     trials[BLOCK_LENGTH_UNBIASED:, 0] = [
@@ -74,12 +76,12 @@ def make_neuromodcw_session(rng=None):
             CONTRAST_LEVELS,
             probability_type=CONTRAST_DRAW_TYPE
         )
-        for trial in range(SESSION_LENGTH_MAX - BLOCK_LENGTH_UNBIASED)
+        for trial in range(NTRIALS_INIT - BLOCK_LENGTH_UNBIASED)
     ]
     # create bias block cycler with randomized order
     stim_p_cycler = cycle(rng.permutation(STIM_PROBABILITIES))
     trial_count = BLOCK_LENGTH_UNBIASED
-    while trial_count < SESSION_LENGTH_MAX:
+    while trial_count < NTRIALS_INIT:
         stim_p = next(stim_p_cycler)  # stim position probability for this block
         block_length = int(truncated_exponential(  # length for this block
             BLOCK_LENGTH_SCALE,
@@ -87,7 +89,7 @@ def make_neuromodcw_session(rng=None):
             BLOCK_LENGTH_MAX
         ))
         # truncate block length if too few trials remain in session
-        block_length = min(block_length, SESSION_LENGTH_MAX - trial_count)
+        block_length = min(block_length, NTRIALS_INIT - trial_count)
         # draw stim positions for the whole block
         block_positions = rng.choice(
             STIM_POSITIONS,
@@ -101,7 +103,7 @@ def make_neuromodcw_session(rng=None):
     reward_p_cycler = cycle(np.array(REWARD_PROBABILITIES)[permutation_inds])
     reward_v_cycler = cycle(np.array(REWARD_VOLUMES)[permutation_inds])
     trial_count = BLOCK_LENGTH_UNBIASED
-    while trial_count < SESSION_LENGTH_MAX:
+    while trial_count < NTRIALS_INIT:
         reward_p = next(reward_p_cycler)
         reward_v = next(reward_v_cycler)
         block_length = int(truncated_exponential(  # length for this block
@@ -110,7 +112,7 @@ def make_neuromodcw_session(rng=None):
             BLOCK_LENGTH_MAX
         ))
         # truncate block length if too few trials remain in session
-        block_length = min(block_length, SESSION_LENGTH_MAX - trial_count)
+        block_length = min(block_length, NTRIALS_INIT - trial_count)
         # draw reward volumes for the whole block
         block_rewards = rng.choice(
             reward_v,
@@ -125,8 +127,8 @@ def make_neuromodcw_session(rng=None):
     trials[:, 2] = np.abs(trials[:, 2])
     return pd.DataFrame(trials, columns=TRIALS_TABLE_COLUMNS)
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-n', '--n_sessions', type=int, default=1)
     # TODO: contrast and block length draw need to take an rng for this to sense
@@ -142,3 +144,4 @@ if __name__ == "__main__":
 
     fpath = Path(__file__).parent.joinpath('neuromodcw_session_templates.pqt')
     df_sessions.to_parquet(fpath)
+    print(fpath)
