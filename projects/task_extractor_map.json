@@ -2,5 +2,5 @@
   "samuel_cuedBiasedChoiceWorld": "BiasedTrials",
   "_iblrig_tasks_neuromodulatorChoiceWorld": "projects.neuromodulators.TrialsTableNeuromodulator",
   "nate_optoBiasedChoiceWorld": "projects.nate_optoBiasedChoiceWorld.TrialsOpto",
-  "ccu_neuromodulatorChoiceWorld": "projects.ccu_neuromodulator_choice_world"
+  "ccu_neuromodulatorChoiceWorld": "projects.ccu_neuromodulator_choice_world.NeuromodulatorChoiceWorldTrialsBpod"
 }
