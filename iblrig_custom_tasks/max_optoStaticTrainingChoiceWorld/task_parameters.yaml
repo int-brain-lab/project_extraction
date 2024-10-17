@@ -1,0 +1,33 @@
+'CONTRAST_SET': [1.0, 0.25, 0.125, 0.0625, 0.0, 0.0, 0.0625, 0.125, 0.25, 1.0]  # signed contrast set
+'PROBABILITY_SET': [2, 2, 2, 2, 1, 1, 2, 2, 2, 2]  # scalar or list of n signed contrasts values, if scalar all contingencies are equiprobable
+'REWARD_SET_UL': [1.5]  # scalar or list of Ncontrast values
+'POSITION_SET': [-35, -35, -35, -35, -35, 35, 35, 35, 35, 35]  # position set
+'STIM_GAIN': 4.0  # wheel to stimulus relationship
+'STIM_REVERSE': False
+#'DEBIAS': True  # Whether to use debiasing rule or not by repeating error trials  # todo
+
+# Opto parameters
+'OPTO_TTL_STATES': # list of the state machine states where opto stim should be delivered
+  - trial_start
+'OPTO_STOP_STATES':
+  - no_go
+  - error
+  - reward
+'PROBABILITY_OPTO_STIM': 0.2  # probability of optogenetic stimulation
+'MAX_LASER_TIME': 6.0
+'ESTIMATED_LED_POWER_MW': 2.5
+#'MASK_TTL_STATES': # list of the state machine states where mask stim should be delivered
+#  - trial_start
+#  - delay_initiation
+#  - reset_rotary_encoder
+#  - quiescent_period
+#  - stim_on
+#  - interactive_delay
+#  - play_tone
+#  - reset2_rotary_encoder
+#  - closed_loop
+#  - no_go
+#  - freeze_error
+#  - error
+#  - freeze_reward
+#  - reward
