@@ -4,7 +4,7 @@ import numpy as np
 
 import one.alf.io as alfio
 from ibllib.io.extractors import ephys_fpga
-from neurodsp.utils import sync_timestamps
+from ibldsp.utils import sync_timestamps
 from ibllib.plots import squares, vertical_lines
 from ibllib.pipes import tasks
 

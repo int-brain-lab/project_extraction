@@ -1,3 +1,4 @@
+import unittest
 import shutil
 
 import numpy as np
@@ -6,9 +7,8 @@ import one.alf.io as alfio
 from one.api import ONE
 from ci.tests import base
 
-from projects.ephys_passive_opto import EphysPassiveOptoTrials
 
-
+@unittest.skip('old pipeline no longer supported')
 class TestEphysPassiveOptoTrials(base.IntegrationTest):
 
     def setUp(self) -> None:
@@ -21,6 +21,7 @@ class TestEphysPassiveOptoTrials(base.IntegrationTest):
         :return:
         """
         session_path = self.session_path
+        from projects.ephys_passive_opto import EphysPassiveOptoTrials
         task = EphysPassiveOptoTrials(session_path=session_path, one=self.one_offline)
         task.run()
 

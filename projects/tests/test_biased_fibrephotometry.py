@@ -1,7 +1,7 @@
+import unittest
 import shutil
 
 import numpy as np
-import ibllib.pipes.training_preprocessing as tpp
 from projects import biased_fibrephotometry
 import one.alf.io as alfio
 from one.api import ONE
@@ -10,6 +10,7 @@ from one.api import ONE
 from ci.tests import base
 
 
+@unittest.skip('old pipeline no longer supported')
 class TestBiasedPhotometry(base.IntegrationTest):
 
     def setUp(self) -> None:
@@ -32,6 +33,7 @@ class TestBiasedPhotometry(base.IntegrationTest):
         #     link.symlink_to(ff)
 
     def test_extraction(self):
+        import ibllib.pipes.training_preprocessing as tpp
 
         # Extract the trials (required for photometry extraction)
         self.assertEqual(
