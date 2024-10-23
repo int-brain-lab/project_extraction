@@ -5,10 +5,8 @@ from one.api import ONE
 from ci.tests import base
 import unittest
 
-from projects.training_bandit import extract_all as training_extract_all
-from projects.ephys_bandit import extract_all as ephys_extract_all
 
-
+@unittest.skip('old pipeline no longer supported')
 class TestTrainingBanditTrials(base.IntegrationTest):
 
     def setUp(self) -> None:
@@ -21,7 +19,7 @@ class TestTrainingBanditTrials(base.IntegrationTest):
         Alejandro training bandit task
         :return:
         """
-
+        from projects.training_bandit import extract_all as training_extract_all
         trials, _, _ = training_extract_all(self.session_path, save=False)
         trials_orig = alfio.load_object(self.session_path.joinpath('alf'), object='trials')
 
@@ -32,6 +30,7 @@ class TestTrainingBanditTrials(base.IntegrationTest):
         assert np.array_equal(trials['table']['contrastRight'], trials_orig['contrastRight'])
 
 
+@unittest.skip('old pipeline no longer supported')
 class TestEphysBanditTrials(base.IntegrationTest):
 
     @unittest.skip("Skip FTP upload test")
@@ -44,7 +43,7 @@ class TestEphysBanditTrials(base.IntegrationTest):
         Alejandro ephys bandit task
         :return:
         """
-
+        from projects.ephys_bandit import extract_all as ephys_extract_all
         trials, _ = ephys_extract_all(self.session_path, save=False)
         trials_orig = alfio.load_object(self.session_path.joinpath('alf'), object='trials')
 

@@ -41,8 +41,7 @@ class TemplateBpodTrialsExtractor(BaseBpodTrialsExtractor):
     :class:`ibllib.io.extractors.mesoscope.TimelineTrials` for examples).
 
     To associate this extractor to your task protocol, you must add it to the
-    `projects/task_extractor_map.json` file. Additionally you can associate `Alyx procedures`_ (e.g.
-    'Optical stimulation') to the protocol with the `projects/task_type_procedures.json` file.
+    `projects/task_extractor_map.json` file.
 
     .. _Alyx procedures: https://openalyx.internationalbrainlab.org/admin/actions/proceduretype/
 

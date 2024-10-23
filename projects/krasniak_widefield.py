@@ -5,7 +5,7 @@ from ibllib.plots.snapshot import ReportSnapshot
 import numpy as np
 import ibllib.exceptions as err
 from ibllib.pipes.base_tasks import WidefieldTask
-import neurodsp as dsp
+import ibldsp as dsp
 import logging
 from one.api import ONE
 from ibllib.io.extractors.camera import get_video_length

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name            = "project_extraction"
-version         = "0.2.7"
+version         = "0.3.0"
 description     = "Custom extractors for satellite tasks"
 dynamic         = [ "readme" ]
 keywords        = [ "IBL", "neuro-science" ]
