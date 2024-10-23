@@ -71,7 +71,7 @@ class Session(StaticTrainingChoiceSession, PulsePalMixin):
         
         # get the calibration values for the LED
         # TODO: do a calibration curve instead
-        dat = pd.read_csv(r'V:/opto_fiber_calibration_values.csv')
+        dat = pd.read_csv(r'Y:/opto_fiber_calibration_values.csv')
         l_cannula = f'{kwargs["subject"]}L' #TODO: where is SUBJECT defined?
         r_cannula = f'{kwargs["subject"]}R'
         l_cable = 0
