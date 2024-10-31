@@ -22,7 +22,10 @@ class NeuromodulatorChoiceWorldTrialsBpod(BiasedTrials):
 
         # register the outputs with the extractor
         dict_outputs['rich_probability_left'] = trials_table['rich_probability_left'].values
+        dict_outputs['reward_amount'] = trials_table['reward_amount'].values
         self.save_names = self.save_names + ('_ibl_trials.richProbabilityLeft.npy',)
         self.var_names = self.var_names + ('rich_probability_left',)
+        self.save_names = self.save_names + ('_ibl_trials.rewardAmount.npy',)
+        self.var_names = self.var_names + ('reward_amount',)
 
         return dict_outputs
