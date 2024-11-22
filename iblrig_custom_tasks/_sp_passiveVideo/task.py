@@ -15,7 +15,7 @@ from pybpodapi.protocol import Bpod
 import iblrig.misc
 from iblrig.base_tasks import BpodMixin
 
-_logger = logging.getLogger(__name__)
+_logger = logging.getLogger(f'iblrig.{__name__}')
 
 # this allows the CI and automated tests to import the file and make sure it is valid without having vlc
 try:
@@ -29,21 +29,20 @@ except ModuleNotFoundError:
 
 class Player:
     """A VLC player."""
-    def __init__(self, rate=1, logger=None):
+    def __init__(self, rate=1):
         self._instance = vlc.Instance(['--video-on-top'])
         self._player = self._instance.media_player_new()
         self._player.set_fullscreen(True)
         self._player.set_rate(rate)
         self._media = None
         self.events = defaultdict(list)
-        self.logger = logger or _logger
         em = self._player.event_manager()
         for event in (vlc.EventType.MediaPlayerPlaying, vlc.EventType.MediaPlayerEndReached):
             em.event_attach(event, self._record_event)
 
     def _record_event(self, event):
         """VLC event callback."""
-        self.logger.debug('%s', event.type)
+        _logger.debug('%s', event.type)
         # Have to convert to str as object pointer may change
         self.events[str(event.type).split('.')[-1]].append(time.time())
 
@@ -119,7 +118,7 @@ class Session(BpodMixin):
         self.data = pd.DataFrame(pd.NA, index=range(self.task_params.NREPEATS), columns=columns)
 
     def save(self):
-        self.logger.info('Saving data')
+        _logger.info('Saving data')
         if self.video:
             data = pd.concat([self.data, pd.DataFrame.from_dict(self.video.events)], axis=1)
             data.to_parquet(self.paths.DATA_FILE_PATH)
@@ -127,17 +126,17 @@ class Session(BpodMixin):
 
     def start_hardware(self):
         self.start_mixin_bpod()  # used for protocol spacer only
-        self.video = Player(logger=self.logger)
+        self.video = Player()
 
     def next_trial(self):
         """Start the next trial."""
         self.trial_num += 1
         self.data.at[self.trial_num, 'intervals_0'] = time.time()
         if self.trial_num == 0:
-            self.logger.info('Starting video %s', self.task_params.VIDEO)
+            _logger.info('Starting video %s', self.task_params.VIDEO)
             self.video.play(self.task_params.VIDEO)
         else:
-            self.logger.debug('Trial #%i: Replaying video', self.trial_num + 1)
+            _logger.debug('Trial #%i: Replaying video', self.trial_num + 1)
             assert self.video
             self.video.replay()
 
@@ -166,7 +165,7 @@ class Session(BpodMixin):
             self.session_info.NTRIALS += 1
             self.data.at[self.trial_num, 'intervals_1'] = time.time()
             dt = self.task_params.ITI_DELAY_SECS - (time.time() - end_time)
-            self.logger.debug(f'dt = {dt}')
+            _logger.debug(f'dt = {dt}')
             # wait to achieve the desired ITI duration
             if dt > 0:
                 time.sleep(dt)
