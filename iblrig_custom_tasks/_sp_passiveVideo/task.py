@@ -6,6 +6,7 @@ TODO Add custom task list to Session class
 import time
 from pathlib import Path
 from collections import defaultdict
+from functools import partial
 import logging
 import warnings
 
@@ -27,6 +28,18 @@ except ModuleNotFoundError:
         'git+https://github.com/int-brain-lab/project_extraction.git"', RuntimeWarning)
 
 
+class MediaStats(vlc.MediaStats):
+    """A class to store media stats."""
+
+    def fieldnames(self):
+        """Return the field names."""
+        return zip(*self._fields_)[0]
+
+    def as_tuple(self):
+        """Return all attribute values as a tuple."""
+        return tuple(map(partial(getattr, self), self.fieldnames()))
+
+
 class Player:
     """A VLC player."""
     def __init__(self, rate=1):
@@ -35,6 +48,8 @@ class Player:
         self._player.set_fullscreen(True)
         self._player.set_rate(rate)
         self._media = None
+        self._media_stats = MediaStats()
+        self._stats = []
         self.events = defaultdict(list)
         em = self._player.event_manager()
         for event in (vlc.EventType.MediaPlayerPlaying, vlc.EventType.MediaPlayerEndReached):
@@ -45,6 +60,27 @@ class Player:
         _logger.debug('%s', event.type)
         # Have to convert to str as object pointer may change
         self.events[str(event.type).split('.')[-1]].append(time.time())
+
+    def update_media_stats(self):
+        """Update media stats.
+
+        Returns
+        -------
+        bool
+            True if the stats have changed since the last update.
+        """
+        if not vlc.libvlc_media_get_stats(self._player.get_media(), self._media_stats):
+            return False
+        stats = tuple((time.time(), *self._media_stats.as_tuple()))
+        if not any(self._stats) or stats[1:] != self._stats[-1][1:]:
+            self._stats.append(stats)
+            return True
+        return False
+
+    @property
+    def stats(self):
+        """Return media stats."""
+        return pd.DataFrame(self._stats, columns=['time', *self._media_stats.fieldnames()])
 
     def play(self, path):
         """Play a video.
@@ -112,8 +148,10 @@ class Session(BpodMixin):
         if self.hardware_settings.get('MAIN_SYNC', False):
             raise NotImplementedError('Recording frame2ttl on Bpod not yet implemented')
         self.paths.DATA_FILE_PATH = self.paths.DATA_FILE_PATH.with_name('_sp_taskData.raw.pqt')
+        self.paths.STATS_FILE_PATH = self.paths.DATA_FILE_PATH.with_name('_sp_videoData.stats.pqt')
         self.video = None
         self.trial_num = -1
+        self._log_level = logging.getLevelNamesMapping()[kwargs.get('log_level', 'INFO')]
         columns = ['intervals_0', 'intervals_1']
         self.data = pd.DataFrame(pd.NA, index=range(self.task_params.NREPEATS), columns=columns)
 
@@ -122,10 +160,13 @@ class Session(BpodMixin):
         if self.video:
             data = pd.concat([self.data, pd.DataFrame.from_dict(self.video.events)], axis=1)
             data.to_parquet(self.paths.DATA_FILE_PATH)
+            if 20 > self._log_level > 0:
+                stats = self.video.stats
+                stats.to_parquet(self.paths.STATS_FILE_PATH)
         self.paths.SESSION_FOLDER.joinpath('transfer_me.flag').touch()
 
     def start_hardware(self):
-        self.start_mixin_bpod()  # used for protocol spacer only
+        self.start_mixin_bpod()
         self.video = Player()
 
     def next_trial(self):
@@ -150,8 +191,6 @@ class Session(BpodMixin):
 
     def _run(self):
         """This is the method that runs the video."""
-        # make the bpod send spacer signals to the main sync clock for protocol discovery
-        self.send_spacers()
         for rep in range(self.task_params.NREPEATS):  # Main loop
             self.next_trial()
             self._set_bpod_out(True)
@@ -159,6 +198,8 @@ class Session(BpodMixin):
             while not self.video.is_started:
                 ...  # takes time to actually start playback
             while self.video.is_playing or (end_time := self.video.get_ended_time(rep)) is None:
+                if 20 > self._log_level > 0:
+                    self.video.update_media_stats()
                 time.sleep(0.05)
             # trial finishes when playback finishes
             self._set_bpod_out(False)
