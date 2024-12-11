@@ -151,7 +151,8 @@ class Session(BpodMixin):
         self.paths.STATS_FILE_PATH = self.paths.DATA_FILE_PATH.with_name('_sp_videoData.stats.pqt')
         self.video = None
         self.trial_num = -1
-        self._log_level = logging.getLevelNamesMapping()[kwargs.get('log_level', 'INFO')]
+        # For py3.11 use logging.getLevelNamesMapping instead
+        self._log_level = logging.getLevelName(kwargs.get('log_level', 'INFO'))
         columns = ['intervals_0', 'intervals_1']
         self.data = pd.DataFrame(pd.NA, index=range(self.task_params.NREPEATS), columns=columns)
 
