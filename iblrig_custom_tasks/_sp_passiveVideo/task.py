@@ -137,6 +137,21 @@ class Player:
         elif repeat == -1 or len(ends) > repeat:
             return ends[repeat]
 
+    def get_media_length(self):
+        """
+        Return length of the video in seconds.
+
+        Returns
+        -------
+        float, None
+            The length of the video in seconds when played at the provided frame rate.
+            None is returned when no video is loaded.
+        """
+        if self._media:
+            length = self._media.get_length()
+            if length > -1:
+                return length / 1e3
+
 
 class Session(BpodMixin):
     """Play a single video."""
@@ -206,6 +221,7 @@ class Session(BpodMixin):
             self._set_bpod_out(False)
             self.session_info.NTRIALS += 1
             self.data.at[self.trial_num, 'intervals_1'] = time.time()
+            self.data.at[self.trial_num, 'video_runtime'] = self.video.get_media_length()
             dt = self.task_params.ITI_DELAY_SECS - (time.time() - end_time)
             _logger.debug(f'dt = {dt}')
             # wait to achieve the desired ITI duration
