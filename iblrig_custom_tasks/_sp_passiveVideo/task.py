@@ -4,6 +4,7 @@ TODO saves to parquet; would require changes to raw data loaders and behaviour c
 TODO Add custom task list to Session class
 """
 import time
+import shutil
 from pathlib import Path
 from collections import defaultdict
 from functools import partial
@@ -157,6 +158,7 @@ class Session(BpodMixin):
     """Play a single video."""
 
     protocol_name = '_sp_passiveVideo'
+    extractor_tasks = ['PassiveVideoTimeline']
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -179,6 +181,14 @@ class Session(BpodMixin):
             if 20 > self._log_level > 0:
                 stats = self.video.stats
                 stats.to_parquet(self.paths.STATS_FILE_PATH)
+            if self.video._media and self.video._media.get_mrl().endswith(str(self.task_params.VIDEO)):
+                ext = Path(self.task_params.VIDEO).suffix
+                video_file_path = self.paths.DATA_FILE_PATH.with_name(f'_sp_video.raw{ext}')
+                _logger.info('Copying %s -> %s', self.task_params.VIDEO, video_file_path)
+                shutil.copy(self.task_params.VIDEO, video_file_path)
+            else:
+                _logger.warning('Video not copied (video most likely was not played)')
+            self. self.video._media.get_mrl()
         self.paths.SESSION_FOLDER.joinpath('transfer_me.flag').touch()
 
     def start_hardware(self):
