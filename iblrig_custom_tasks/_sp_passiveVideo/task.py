@@ -15,7 +15,7 @@ import pandas as pd
 from pybpodapi.protocol import Bpod
 
 import iblrig.misc
-from iblrig.base_tasks import BpodMixin
+from iblrig.base_tasks import BpodMixin, NetworkSession
 
 _logger = logging.getLogger(f'iblrig.{__name__}')
 
@@ -154,7 +154,7 @@ class Player:
                 return length / 1e3
 
 
-class Session(BpodMixin):
+class Session(BpodMixin, NetworkSession):
     """Play a single video."""
 
     protocol_name = '_sp_passiveVideo'
