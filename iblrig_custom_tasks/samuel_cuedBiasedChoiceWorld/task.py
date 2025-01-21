@@ -25,7 +25,7 @@ class Session(BiasedChoiceWorldSession):
         trials_task = 'CuedBiasedTrials' if is_main_sync else 'CuedBiasedTrialsTimeline'
         self.extractor_tasks = ['TrialRegisterRaw', trials_task, 'TrainingStatus']
         # Update experiment description which was created by superclass init
-        next(iter(self.experiment_description['tasks']))['extractors'] = self.extractor_tasks
+        self.experiment_description['tasks'][-1][self.protocol_name]['extractors'] = self.extractor_tasks
 
         # init behaviour data
         self.movement_left = self.device_rotary_encoder.THRESHOLD_EVENTS[
