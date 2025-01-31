@@ -4,4 +4,10 @@
   "nate_optoBiasedChoiceWorld": "projects.nate_optoBiasedChoiceWorld.TrialsOpto",
   "max_optoStaticTrainingChoiceWorld": "projects.max_optoStaticTrainingChoiceWorld.TrialsOpto",
   "max_staticTrainingChoiceWorld": "BiasedTrials"
+  "FPChoiceWorld": "BiasedTrials",
+  "FPROptoChoiceWorld": "projects.alejandro_FPLROptoChoiceWorld.TrialsFPLROpto",
+  "FPLOptoChoiceWorld": "projects.alejandro_FPLROptoChoiceWorld.TrialsFPLROpto",
+  "_bandit_biasedChoiceWorld": "projects.training_bandit.TrialsBandit",
+  "_bandit_100_0_biasedChoiceWorld": "projects.training_bandit.TrialsBandit",
+  "_bandit_alllaser_cued_ephysChoiceWorld": "projects.training_bandit.TrialsLaserBandit"
 }

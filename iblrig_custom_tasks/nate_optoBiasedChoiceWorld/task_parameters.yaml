@@ -21,3 +21,5 @@
   - freeze_reward
   - reward
 'PROBABILITY_OPTO_STIM': 0.2  # probability of optogenetic stimulation
+'STIM_REVERSE': False
+'USE_ZAPIT': False
