@@ -130,8 +130,7 @@ class PassiveVideoTimeline(BehaviourTask):
         sync, chmap = load_timeline_sync_and_chmap(sync_path, timeline=self.timeline)
 
         # Attempt to get the frame rate from the video file if not provided
-        video_file = next(self.session_path.joinpath(self.collection).glob('_sp_video.raw.*'))
-        if video_file.exists():
+        if video_file := next(self.session_path.joinpath(self.collection).glob('_sp_video.raw.*'), None):
             video_meta = get_video_meta(video_file)
             if frame_rate is not None and frame_rate != video_meta.fps:
                 _logger.warning(
@@ -258,7 +257,7 @@ class PassiveVideoTimeline(BehaviourTask):
             plt.legend(markerfirst=False, title='repeat #', loc='upper right', facecolor='white')
 
             # Check the sync sequence from the video
-            if video_file.exists():
+            if video_file:
                 observed = self.load_sync_sequence_from_video(video_file)
                 _, ax = plt.subplots(2, 1, sharex=True)
                 ax[0].title.set_text('generated sync square sequence')
@@ -278,6 +277,7 @@ class PassiveVideoTimeline(BehaviourTask):
 
         if save:
             filename = self.session_path.joinpath(self.output_collection, '_sp_video.times.npy')
+            filename.parent.mkdir(exist_ok=True, parents=True)
             np.save(filename, frame_times)
             out_files = [filename]
         else:
