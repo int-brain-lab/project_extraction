@@ -27,9 +27,10 @@ class PassiveVideoTimeline(BehaviourTask):
     def signature(self):
         signature = {}
         signature['input_files'] = [
-            ('_sp_taskData.raw.*', self.collection, True),  # TODO Create dataset type?
-            ('_sp_video.raw.*', self.collection, False),
-            ('_iblrig_taskSettings.raw.*', self.collection, True),
+            # NB: _sp_taskData.raw is currently saved under the _iblrig_taskData.raw dataset type in Alyx
+            ('_sp_taskData.raw.*', self.collection, True, True),
+            ('_sp_video.raw.*', self.collection, False, True),
+            ('_iblrig_taskSettings.raw.*', self.collection, True, True),
             (f'_{self.sync_namespace}_DAQdata.raw.npy', self.sync_collection, True),
             (f'_{self.sync_namespace}_DAQdata.timestamps.npy', self.sync_collection, True),
             (f'_{self.sync_namespace}_DAQdata.meta.json', self.sync_collection, True),
