@@ -204,6 +204,9 @@ class PassiveVideoTimeline(BehaviourTask):
             sequence_times += ts[0]
             # The below assertion could be caused by an incorrect frame rate or sync sequence
             assert sequence_times.size <= sync_sequence.size, 'video duration appears longer than sync sequence'
+            if len(sequence_times) > n_frames:
+                # Duration rounding error may lead to 1 frame time too many
+                sequence_times = sequence_times[:n_frames]
             # Keep only the part of the sequence that was shown
             x = sync_sequence[:len(sequence_times)]
             # Find change points (black <-> white indices)
