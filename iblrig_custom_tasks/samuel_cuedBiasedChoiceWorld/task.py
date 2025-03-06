@@ -1,12 +1,15 @@
+import logging
 from pathlib import Path
-from typing import Annotated
+from typing import Any
 
+import numpy as np
 import yaml
-from annotated_types import Interval
 
 import iblrig.misc
 from iblrig.base_choice_world import BiasedChoiceWorldSession, BiasedChoiceWorldTrialData
 from iblrig.hardware import SOFTCODE
+from iblrig.hifi import HiFi
+from iblrig.sound import configure_sound_card
 from iblutil.util import setup_logger
 from pybpodapi.protocol import StateMachine
 
@@ -40,6 +43,44 @@ class Session(BiasedChoiceWorldSession):
 
         # Update experiment description which was created by superclass init
         self.experiment_description['tasks'][-1][self.protocol_name]['extractors'] = self.extractor_tasks
+
+    def start_mixin_sound(self):
+        # call super class
+        super().start_mixin_sound()
+
+        # define silent "sound" with equal length to regular go-cue
+        silence = np.zeros_like(self.sound['GO_TONE'])
+        assert (idx_silence := 4) not in [self.task_params.GO_TONE_IDX, self.task_params.WHITE_NOISE_IDX]
+        sample_rate = self.sound['samplerate']
+
+        # upload waveform to sound card
+        match device_type := self.hardware_settings.device_sound['OUTPUT']:
+            case 'harp':
+                configure_sound_card(sounds=[silence], indexes=[idx_silence], sample_rate=sample_rate)
+            case 'hifi':
+                hifi = HiFi(port=self.hardware_settings.device_sound.COM_SOUND, sampling_rate_hz=sample_rate)
+                hifi.load(index=self.task_params.GO_TONE_IDX, data=silence)
+                hifi.push()
+                hifi.close()
+            case _:
+                raise NotImplementedError(f"Operation not supported for sound device of type '{device_type}'")
+
+        # assign Bpod action
+        module_port = self.bpod.actions['play_tone'][0]
+        module = int(module_port[-1])
+        self.bpod.actions.update({'play_silence': (module_port, self.bpod._define_message(module, [ord('P'), idx_silence]))})
+
+    def next_trial(self):
+        # draw state of audio cue for next trial
+        super().next_trial()
+        self.trials_table.at[self.trial_num, 'play_audio_cue'] = np.random.random() <= self.session_info['PROBABILITY_AUDIO_CUE']
+
+    def show_trial_log(self, extra_info: dict[str, Any] | None = None, log_level: int = logging.INFO):
+        # update trial info with state of audio cue
+        info_dict = {'Audio Cue': self.trials_table.at[self.trial_num, 'play_audio_cue']}
+        if isinstance(extra_info, dict):
+            info_dict.update(extra_info)
+        super().show_trial_log(extra_info=info_dict, log_level=log_level)
 
     def get_state_machine_trial(self, i):
         sma = StateMachine(self.bpod)
@@ -87,10 +128,11 @@ class Session(BiasedChoiceWorldSession):
         )
         # play tone, move on to next state if sound is detected, with a time-out of 0.1s
         # SP how can we make sure the delay between play_tone and stim_on is always exactly 1s?
+        action_name = 'play_tone' if self.trials_table.at[self.trial_num, 'play_audio_cue'] else 'play_silence'
         sma.add_state(
             state_name='play_tone',
             state_timer=0.1,  # SP is this necessary??
-            output_actions=[self.bpod.actions.play_tone],
+            output_actions=[self.bpod.actions[action_name]],
             state_change_conditions={
                 'Tup': 'interactive_delay',
                 'BNC2High': 'interactive_delay',
