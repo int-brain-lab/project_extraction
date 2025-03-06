@@ -77,7 +77,7 @@ class Session(BiasedChoiceWorldSession):
 
     def show_trial_log(self, extra_info: dict[str, Any] | None = None, log_level: int = logging.INFO):
         # update trial info with state of audio cue
-        info_dict = {'Played Audio Cue': self.trials_table.at[self.trial_num, 'play_audio_cue']}
+        info_dict = {'Audio Cue': self.trials_table.at[self.trial_num, 'play_audio_cue']}
         if isinstance(extra_info, dict):
             info_dict.update(extra_info)
         super().show_trial_log(extra_info=info_dict, log_level=log_level)
