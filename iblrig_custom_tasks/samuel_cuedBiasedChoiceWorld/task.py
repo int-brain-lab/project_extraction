@@ -1,8 +1,9 @@
+import logging
 from pathlib import Path
-from typing import Annotated
+from typing import Any
 
+import numpy as np
 import yaml
-from annotated_types import Interval
 
 import iblrig.misc
 from iblrig.base_choice_world import BiasedChoiceWorldSession, BiasedChoiceWorldTrialData
@@ -40,6 +41,18 @@ class Session(BiasedChoiceWorldSession):
 
         # Update experiment description which was created by superclass init
         self.experiment_description['tasks'][-1][self.protocol_name]['extractors'] = self.extractor_tasks
+
+    def next_trial(self):
+        # draw state of audio cue for next trial
+        super().next_trial()
+        self.trials_table.at[self.trial_num, 'play_audio_cue'] = np.random.random() <= self.session_info['PROBABILITY_AUDIO_CUE']
+
+    def show_trial_log(self, extra_info: dict[str, Any] | None = None, log_level: int = logging.INFO):
+        # update trial info with state of audio cue
+        info_dict = {'Played Audio Cue': self.trials_table.at[self.trial_num, 'play_audio_cue']}
+        if isinstance(extra_info, dict):
+            info_dict.update(extra_info)
+        super().show_trial_log(extra_info=info_dict, log_level=log_level)
 
     def get_state_machine_trial(self, i):
         sma = StateMachine(self.bpod)
