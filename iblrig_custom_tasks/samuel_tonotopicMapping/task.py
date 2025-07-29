@@ -30,9 +30,9 @@ class Session(BpodMixin, BaseSession):
         )
         Session.frequencies = np.round(self.frequencies).astype(int)
 
-        # calculate repetitions per state machine run (253 states max)
+        # calculate repetitions per state machine run (255 states max)
         self.repetitions = []
-        max_reps_per_trial = 253 // self.n_frequencies
+        max_reps_per_trial = 255 // self.n_frequencies
         reps_remaining = self.task_params['n_reps_per_freq']
         while reps_remaining > 0:
             self.repetitions.append(min(max_reps_per_trial, reps_remaining))
