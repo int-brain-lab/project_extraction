@@ -21,7 +21,7 @@ class Session(BpodMixin, BaseSession):
         super().__init__(*args, **kwargs)
 
         assert self.hardware_settings.device_sound.OUTPUT == 'harp', 'This task requires a Harp sound-card'
-        assert self.task_params['n_freqs'] <= 31, 'Harp only supports up to 31 individual sounds'
+        assert self.task_params['n_freqs'] <= 30, 'Harp only supports up to 30 individual sounds'
 
         # define frequencies (log spaced from freq_0 to freq_1, rounded to nearest integer)
         Session.frequencies = np.logspace(
