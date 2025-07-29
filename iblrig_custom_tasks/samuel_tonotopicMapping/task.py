@@ -1,20 +1,21 @@
-import json
 
-import pandas as pd
-import numpy as np
 import logging
 
-from pybpodapi.state_machine import StateMachine
+import numpy as np
 
 from iblrig import sound
 from iblrig.base_tasks import BaseSession, BpodMixin
 from iblrig.misc import get_task_arguments
+from pybpodapi.state_machine import StateMachine
 
 logger = logging.getLogger('iblrig')
 
 
 class Session(BpodMixin, BaseSession):
     protocol_name = 'samuel_tonotopicMapping'
+
+    frequencies: list[int] = []
+    sequence: list[int] = []
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -23,12 +24,15 @@ class Session(BpodMixin, BaseSession):
         assert self.task_params['n_freqs'] <= 31, 'Harp only supports up to 31 individual sounds'
 
         # define frequencies (log spaced from freq_0 to freq_1, rounded to nearest integer)
-        self.frequencies = np.logspace(
+        Session.frequencies = np.logspace(
             np.log10(self.task_params['freq_0']),
             np.log10(self.task_params['freq_1']),
             num=self.task_params['n_freqs'],
         )
-        self.frequencies = np.round(self.frequencies).astype(int)
+        Session.frequencies = np.round(self.frequencies).astype(int)
+
+        # repetitions per state machine run (253 states max)
+        self.repetitions = 253 // len(self.frequencies)
 
         # generate stimuli
         self.stimuli = []
@@ -53,43 +57,58 @@ class Session(BpodMixin, BaseSession):
 
         module = self.bpod.sound_card
         module_port = f'Serial{module.serial_port if module is not None else "3"}'
-        for idx, harp_index in enumerate(self.indices):
-            bpod_message = [ord("P"), harp_index]
+        for frequency_idx, harp_idx in enumerate(self.indices):
+            bpod_message = [ord('P'), harp_idx]
             bpod_action = (module_port, self.bpod._define_message(self.bpod.sound_card, bpod_message))
-            self.bpod.actions.update({f'play_{idx}': bpod_action})
+            self.bpod.actions.update({f'freq_{frequency_idx}': bpod_action})
+
+        self.bpod.softcode_handler_function = Session.softcode_handler
 
     def start_hardware(self):
         self.start_mixin_bpod()
         self.start_mixin_sound()
 
-    def get_state_machine(self, sequence):
-        sma = StateMachine(self.bpod)
-        # table = self.sequence_table[self.sequence_table['sequence'] == sequence].reindex()
+    @staticmethod
+    def get_state_name(state_idx: int):
+        if state_idx < len(Session.sequence):
+            return f'{state_idx + 1:03d}_{Session.frequencies[Session.sequence[state_idx]]}'
+        else:
+            return 'exit'
 
-        for i, frequency in enumerate(self.frequencies):
+    @staticmethod
+    def softcode_handler(softcode: int) -> None:
+        """log some information about the current state"""
+        state_index = softcode - 1
+        frequency_index = Session.sequence[state_index]
+        frequency = Session.frequencies[frequency_index]
+        n_states = len(Session.sequence)
+        logger.info(f'{state_index + 1:03d}/{n_states}: {frequency:5d} Hz')
+
+    def get_state_machine(self, seed: int) -> StateMachine:
+        # generate shuffled sequence, seeded with state machine number
+        Session.sequence = np.repeat(np.arange(len(self.frequencies)), self.repetitions)
+        np.random.seed(seed)
+        np.random.shuffle(Session.sequence)
+
+        # build state machine
+        sma = StateMachine(self.bpod)
+        for state_idx, frequency_idx in enumerate(Session.sequence):
             sma.add_state(
-                state_name=f"trigger_sound_{i}",
+                state_name=self.get_state_name(state_idx),
                 state_timer=self.task_params['d_sound'] + self.task_params['d_pause'],
-                output_actions=[self.bpod.actions[f'play_{i}']],
-                state_change_conditions={
-                    "Tup": f"trigger_sound_{i + 1}",
-                },
+                output_actions=[self.bpod.actions[f'freq_{frequency_idx}'], ('SoftCode', state_idx + 1)],
+                state_change_conditions={'Tup': self.get_state_name(state_idx + 1)},
             )
-        sma.add_state(
-            state_name=f"trigger_sound_{i + 1}",
-            state_timer=0.0,
-            state_change_conditions={"Tup": "exit"},
-        )
         return sma
 
     def _run(self):
-        logger.info("Sending spacers to BNC ports")
+        logger.info('Sending spacers to BNC ports')
         self.send_spacers()
 
         sma = self.get_state_machine(1)
         self.bpod.send_state_machine(sma)
         self.bpod.run_state_machine(sma)
-
+        self.bpod.session.current_trial.export()
 
 
 if __name__ == '__main__':  # pragma: no cover
