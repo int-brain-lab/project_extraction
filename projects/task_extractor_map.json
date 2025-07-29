@@ -9,5 +9,6 @@
   "FPLOptoChoiceWorld": "projects.alejandro_FPLROptoChoiceWorld.TrialsFPLROpto",
   "_bandit_biasedChoiceWorld": "projects.training_bandit.TrialsBandit",
   "_bandit_100_0_biasedChoiceWorld": "projects.training_bandit.TrialsBandit",
-  "_bandit_alllaser_cued_ephysChoiceWorld": "projects.training_bandit.TrialsLaserBandit"
+  "_bandit_alllaser_cued_ephysChoiceWorld": "projects.training_bandit.TrialsLaserBandit",
+  "_iblrig_tasks_widefieldChoiceWorld": "EphysTrials"
 }
