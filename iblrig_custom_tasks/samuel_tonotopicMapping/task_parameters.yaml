@@ -1,6 +1,7 @@
 'freq_0': 2000  # lowest frequency to map (Hz)
 'freq_1': 16000  # highest frequency to map (Hz)
 'n_freqs': 30  # number of frequencies to map - Harp supports a maximum of 30 individual sounds
+'n_reps_per_freq': 10  # number of presentations per frequency
 'd_pause': 0.01  # duration of silence inbetween sound pulses (s)
 'd_sound': 0.15  # duration of sound pulse (s)
 'd_ramp': 0.01  # duration of Hanning ramp (s)
