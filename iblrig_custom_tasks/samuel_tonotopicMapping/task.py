@@ -31,8 +31,13 @@ class Session(BpodMixin, BaseSession):
         )
         Session.frequencies = np.round(self.frequencies).astype(int)
 
-        # repetitions per state machine run (253 states max)
-        self.repetitions = 253 // len(self.frequencies)
+        # calculate repetitions per state machine run (253 states max)
+        self.repetitions = []
+        max_reps_per_trial = (253 // self.n_frequencies)
+        reps_remaining = self.task_params['n_reps_per_freq']
+        while reps_remaining > 0:
+            self.repetitions.append(min(max_reps_per_trial, reps_remaining))
+            reps_remaining -= self.repetitions[-1]
 
         # generate stimuli
         self.stimuli = []
@@ -50,6 +55,14 @@ class Session(BpodMixin, BaseSession):
         self.indices = [i for i in range(2, len(self.stimuli) + 2)]
 
         # self.attenuation = pd.read_csv(self.get_task_directory().joinpath('attenuation.csv'))
+
+    @property
+    def n_frequencies(self):
+        return len(self.frequencies)
+
+    @property
+    def n_state_machines(self):
+        return len(self.repetitions)
 
     def start_mixin_sound(self):
         logger.info(f'Pushing {len(self.frequencies)} stimuli to Harp soundcard')
@@ -82,12 +95,12 @@ class Session(BpodMixin, BaseSession):
         frequency_index = Session.sequence[state_index]
         frequency = Session.frequencies[frequency_index]
         n_states = len(Session.sequence)
-        logger.info(f'{state_index + 1:03d}/{n_states}: {frequency:5d} Hz')
+        logger.info(f'- {state_index + 1:03d}/{n_states}: {frequency:5d} Hz')
 
-    def get_state_machine(self, seed: int) -> StateMachine:
+    def get_state_machine(self, sma_idx: int) -> StateMachine:
         # generate shuffled sequence, seeded with state machine number
-        Session.sequence = np.repeat(np.arange(len(self.frequencies)), self.repetitions)
-        np.random.seed(seed)
+        Session.sequence = np.repeat(np.arange(len(self.frequencies)), self.repetitions[sma_idx])
+        np.random.seed(sma_idx)
         np.random.shuffle(Session.sequence)
 
         # build state machine
@@ -105,10 +118,12 @@ class Session(BpodMixin, BaseSession):
         logger.info('Sending spacers to BNC ports')
         self.send_spacers()
 
-        sma = self.get_state_machine(1)
-        self.bpod.send_state_machine(sma)
-        self.bpod.run_state_machine(sma)
-        self.bpod.session.current_trial.export()
+        for sma_idx in range(self.n_state_machines):
+            logger.info(f'State Machine {sma_idx + 1}/{self.n_state_machines}')
+            sma = self.get_state_machine(sma_idx)
+            self.bpod.send_state_machine(sma)
+            self.bpod.run_state_machine(sma)
+            self.bpod.session.current_trial.export()
 
 
 if __name__ == '__main__':  # pragma: no cover
