@@ -1,4 +1,3 @@
-
 import logging
 
 import numpy as np
@@ -33,7 +32,7 @@ class Session(BpodMixin, BaseSession):
 
         # calculate repetitions per state machine run (253 states max)
         self.repetitions = []
-        max_reps_per_trial = (253 // self.n_frequencies)
+        max_reps_per_trial = 253 // self.n_frequencies
         reps_remaining = self.task_params['n_reps_per_freq']
         while reps_remaining > 0:
             self.repetitions.append(min(max_reps_per_trial, reps_remaining))
@@ -126,7 +125,7 @@ class Session(BpodMixin, BaseSession):
             self.bpod.session.current_trial.export()
 
 
-if __name__ == '__main__':  # pragma: no cover
+if __name__ == '__main__':
     kwargs = get_task_arguments()
     sess = Session(**kwargs)
     sess.run()
