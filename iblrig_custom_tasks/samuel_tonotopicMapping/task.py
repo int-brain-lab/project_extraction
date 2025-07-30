@@ -105,7 +105,7 @@ class Session(BpodMixin, BaseSession):
             bpod_action = (module_port, self.bpod._define_message(self.bpod.sound_card, bpod_message))
             self.bpod.actions.update({f'freq_{frequency_idx}': bpod_action})
 
-        self.bpod.softcode_handler_function = Session.softcode_handler
+        self.bpod.softcode_handler_function = self.softcode_handler
 
     def start_hardware(self):
         self.start_mixin_bpod()
@@ -136,7 +136,7 @@ class Session(BpodMixin, BaseSession):
 
         # build state machine
         sma = StateMachine(self.bpod)
-        for state_idx, frequency_idx in enumerate(Session.sequence):
+        for state_idx, frequency_idx in enumerate(self.sequence):
             sma.add_state(
                 state_name=self.get_state_name(state_idx),
                 state_timer=self.task_params['d_sound'] + self.task_params['d_pause'],
