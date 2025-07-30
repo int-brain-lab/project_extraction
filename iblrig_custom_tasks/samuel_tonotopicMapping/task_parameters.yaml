@@ -8,3 +8,4 @@
 'amplitude': 0.05  # initial amplitude of all stimuli prior to dB attenuation
 'fs': 192000  # sampling rate (Hz) - Harp supports 96000 Hz and 192000 Hz
 'shuffle': true  # whether to shuffle the order of frequencies or not
+'skip_attenuation': false  # whether to skip gain correction (potentially useful for calibration)

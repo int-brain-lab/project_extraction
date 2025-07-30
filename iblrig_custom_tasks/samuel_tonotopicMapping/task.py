@@ -8,9 +8,8 @@ from iblrig import sound
 from iblrig.base_choice_world import NTRIALS_INIT
 from iblrig.base_tasks import BaseSession, BpodMixin
 from iblrig.misc import get_task_arguments
-from pybpodapi.state_machine import StateMachine
-
 from iblrig.pydantic_definitions import TrialDataModel
+from pybpodapi.state_machine import StateMachine
 
 log = logging.getLogger('iblrig')
 
@@ -19,7 +18,6 @@ class TonotopicMappingTrialData(TrialDataModel):
     """Pydantic Model for Trial Data."""
 
     frequency_sequence: list[int]
-
 
 
 class Session(BpodMixin, BaseSession):
@@ -56,11 +54,14 @@ class Session(BpodMixin, BaseSession):
             self.attenuation_lut.to_csv(attenuation_file, index=False)
 
         # get attenuation values from LUT (linear interpolation for missing values)
-        self.attenuation = np.interp(
-            self.frequencies,
-            self.attenuation_lut['frequency_hz'],
-            self.attenuation_lut['attenuation_db'],
-        )
+        if self.task_params['skip_attenuation']:
+            self.attenuation = pd.DataFrame({'frequency_hz': self.frequencies, 'attenuation_db': np.zeros(self.n_frequencies)})
+        else:
+            self.attenuation = np.interp(
+                self.frequencies,
+                self.attenuation_lut['frequency_hz'],
+                self.attenuation_lut['attenuation_db'],
+            )
 
         # calculate repetitions per state machine run (255 states max)
         self.repetitions = []
