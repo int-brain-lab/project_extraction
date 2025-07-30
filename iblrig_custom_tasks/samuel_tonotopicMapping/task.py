@@ -113,10 +113,11 @@ class Session(BpodMixin, BaseSession):
         logger.info(f'- {state_index + 1:03d}/{n_states}: {frequency:5d} Hz')
 
     def get_state_machine(self, sma_idx: int) -> StateMachine:
-        # generate shuffled sequence, seeded with state machine number
+        # generate sequence, optionally shuffled (seeded with state machine number)
         Session.sequence = np.repeat(np.arange(len(self.frequencies)), self.repetitions[sma_idx])
-        np.random.seed(sma_idx)
-        np.random.shuffle(Session.sequence)
+        if self.task_params['shuffle']:
+            np.random.seed(sma_idx)
+            np.random.shuffle(Session.sequence)
 
         # build state machine
         sma = StateMachine(self.bpod)
