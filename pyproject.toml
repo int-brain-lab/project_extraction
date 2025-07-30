@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name            = "project_extraction"
-version         = "0.8.4"
+version         = "0.9.0"
 description     = "Custom extractors for satellite tasks"
 dynamic         = [ "readme" ]
 keywords        = [ "IBL", "neuro-science" ]
@@ -24,11 +24,6 @@ readme = { file = "README.md", content-type = "text/markdown" }
 find = {}
 
 [tool.ruff]
-ignore = [
-    "PLR0912", # Too many branches
-    "PLR0915", # Too many statements
-    "PLR2004", # Magic value used in comparison, consider replacing with a constant variable
-]
 exclude = [
     ".mypy_cache",
     "dist",
@@ -51,6 +46,11 @@ select = [
     "PL",  # pylint
     "SIM", # flake8-simplify
     "UP",  # pyupgrade
+]
+ignore = [
+    "PLR0912", # Too many branches
+    "PLR0915", # Too many statements
+    "PLR2004", # Magic value used in comparison, consider replacing with a constant variable
 ]
 
 [tool.ruff.format]
