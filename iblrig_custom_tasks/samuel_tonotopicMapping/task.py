@@ -1,24 +1,38 @@
 import logging
+import time
 
 import numpy as np
 import pandas as pd
 
 from iblrig import sound
+from iblrig.base_choice_world import NTRIALS_INIT
 from iblrig.base_tasks import BaseSession, BpodMixin
 from iblrig.misc import get_task_arguments
 from pybpodapi.state_machine import StateMachine
 
-logger = logging.getLogger('iblrig')
+from iblrig.pydantic_definitions import TrialDataModel
+
+log = logging.getLogger('iblrig')
+
+
+class TonotopicMappingTrialData(TrialDataModel):
+    """Pydantic Model for Trial Data."""
+
+    frequency_sequence: list[int]
+
 
 
 class Session(BpodMixin, BaseSession):
     protocol_name = 'samuel_tonotopicMapping'
+    TrialDataModel = TonotopicMappingTrialData
 
     frequencies: list[int] = []
     sequence: list[int] = []
+    trial_num: int = -1
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.trials_table = self.TrialDataModel.preallocate_dataframe(NTRIALS_INIT)
 
         assert self.hardware_settings.device_sound.OUTPUT == 'harp', 'This task requires a Harp sound-card'
         assert self.task_params['n_freqs'] <= 30, 'Harp only supports up to 30 individual sounds'
@@ -76,11 +90,11 @@ class Session(BpodMixin, BaseSession):
         return len(self.frequencies)
 
     @property
-    def n_state_machines(self):
+    def n_trials(self):
         return len(self.repetitions)
 
     def start_mixin_sound(self):
-        logger.info(f'Pushing {len(self.frequencies)} stimuli to Harp soundcard')
+        log.info(f'Pushing {len(self.frequencies)} stimuli to Harp soundcard')
         sound.configure_sound_card(sounds=self.stimuli, indexes=self.indices, sample_rate=self.task_params['fs'])
 
         module = self.bpod.sound_card
@@ -110,13 +124,13 @@ class Session(BpodMixin, BaseSession):
         frequency_index = Session.sequence[state_index]
         frequency = Session.frequencies[frequency_index]
         n_states = len(Session.sequence)
-        logger.info(f'- {state_index + 1:03d}/{n_states}: {frequency:5d} Hz')
+        log.info(f'- {state_index + 1:03d}/{n_states}: {frequency:5d} Hz')
 
-    def get_state_machine(self, sma_idx: int) -> StateMachine:
-        # generate sequence, optionally shuffled (seeded with state machine number)
-        Session.sequence = np.repeat(np.arange(len(self.frequencies)), self.repetitions[sma_idx])
+    def get_state_machine(self, trial_number: int) -> StateMachine:
+        # generate sequence, optionally shuffled (seeded with trial number)
+        Session.sequence = np.repeat(np.arange(len(self.frequencies)), self.repetitions[trial_number])
         if self.task_params['shuffle']:
-            np.random.seed(sma_idx)
+            np.random.seed(trial_number)
             np.random.shuffle(Session.sequence)
 
         # build state machine
@@ -131,15 +145,35 @@ class Session(BpodMixin, BaseSession):
         return sma
 
     def _run(self):
-        logger.info('Sending spacers to BNC ports')
+        log.info('Sending spacers to BNC ports')
         self.send_spacers()
 
-        for sma_idx in range(self.n_state_machines):
-            logger.info(f'State Machine {sma_idx + 1}/{self.n_state_machines}')
-            sma = self.get_state_machine(sma_idx)
+        for trial_number in range(self.n_trials):
+            self.trial_num = trial_number
+
+            # run state machine
+            log.info(f'Starting Trial #{trial_number} ({trial_number + 1}/{self.n_trials})')
+            sma = self.get_state_machine(trial_number)
             self.bpod.send_state_machine(sma)
             self.bpod.run_state_machine(sma)
-            self.bpod.session.current_trial.export()
+
+            # handle pause event
+            if self.paused and trial_number < (self.task_params.NTRIALS - 1):
+                log.info(f'Pausing session inbetween trials #{trial_number} and #{trial_number + 1}')
+                while self.paused and not self.stopped:
+                    time.sleep(1)
+                if not self.stopped:
+                    log.info('Resuming session')
+
+            # save trial data
+            self.trials_table.at[self.trial_num, 'frequency_sequence'] = self.frequencies[self.sequence]
+            bpod_data = self.bpod.session.current_trial.export()
+            self.save_trial_data_to_json(bpod_data)
+
+            # handle stop event
+            if self.stopped:
+                log.info('Stopping session after trial #%d', trial_number)
+                break
 
 
 if __name__ == '__main__':
