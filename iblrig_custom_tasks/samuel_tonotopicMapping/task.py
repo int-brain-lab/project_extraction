@@ -1,6 +1,7 @@
 import logging
 
 import numpy as np
+import pandas as pd
 
 from iblrig import sound
 from iblrig.base_tasks import BaseSession, BpodMixin
@@ -30,6 +31,23 @@ class Session(BpodMixin, BaseSession):
         )
         Session.frequencies = np.round(self.frequencies).astype(int)
 
+        # get LUT (or create new one based on frequencies)
+        attenuation_file = self.get_task_directory().joinpath('attenuation.csv')
+        if attenuation_file.exists():
+            self.attenuation_lut = pd.read_csv(self.get_task_directory().joinpath('attenuation.csv'))
+        else:
+            self.attenuation_lut = pd.DataFrame(
+                {'frequency_hz': self.frequencies, 'attenuation_db': np.zeros(self.n_frequencies)}
+            )
+            self.attenuation_lut.to_csv(attenuation_file, index=False)
+
+        # get attenuation values from LUT (linear interpolation for missing values)
+        self.attenuation = np.interp(
+            self.frequencies,
+            self.attenuation_lut['frequency_hz'],
+            self.attenuation_lut['attenuation_db'],
+        )
+
         # calculate repetitions per state machine run (255 states max)
         self.repetitions = []
         max_reps_per_trial = 255 // self.n_frequencies
@@ -40,7 +58,7 @@ class Session(BpodMixin, BaseSession):
 
         # generate stimuli
         self.stimuli = []
-        for f in self.frequencies:
+        for idx, f in enumerate(self.frequencies):
             tmp = sound.make_sound(
                 rate=self.task_params['fs'],
                 frequency=f,
@@ -48,12 +66,10 @@ class Session(BpodMixin, BaseSession):
                 amplitude=self.task_params['amplitude'],
                 fade=self.task_params['d_ramp'],
                 chans='stereo',
-                gain_db=0,
+                gain_db=self.attenuation[idx],
             )
             self.stimuli.append(tmp)
         self.indices = [i for i in range(2, len(self.stimuli) + 2)]
-
-        # self.attenuation = pd.read_csv(self.get_task_directory().joinpath('attenuation.csv'))
 
     @property
     def n_frequencies(self):
