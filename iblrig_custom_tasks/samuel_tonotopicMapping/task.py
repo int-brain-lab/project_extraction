@@ -71,6 +71,15 @@ class Session(BpodMixin, BaseSession):
             self.repetitions.append(min(max_reps_per_trial, reps_remaining))
             reps_remaining -= self.repetitions[-1]
 
+        # select channel configuration for playback
+        match self.hardware_settings.device_sound.DEFAULT_CHANNELS:
+            case 'left':
+                channels = 'right'
+            case 'right':
+                channels = 'left'
+            case _:
+                channels = 'stereo'
+
         # generate stimuli
         self.stimuli = []
         for idx, f in enumerate(self.frequencies):
@@ -80,7 +89,7 @@ class Session(BpodMixin, BaseSession):
                 duration=self.task_params['d_sound'],
                 amplitude=self.task_params['amplitude'],
                 fade=self.task_params['d_ramp'],
-                chans='stereo',
+                chans=channels,
                 gain_db=self.attenuation[idx],
             )
             self.stimuli.append(tmp)
