@@ -24,8 +24,8 @@ class Session(BpodMixin, BaseSession):
     protocol_name = 'samuel_tonotopicMapping'
     TrialDataModel = TonotopicMappingTrialData
 
-    frequencies: list[int] = []
-    sequence: list[int] = []
+    frequencies: np.ndarray = np.array([])
+    sequence: np.ndarray = np.array([])
     trial_num: int = -1
 
     def __init__(self, *args, **kwargs):
