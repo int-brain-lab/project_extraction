@@ -36,12 +36,17 @@ class Session(BpodMixin, BaseSession):
         assert self.task_params['n_freqs'] <= 30, 'Harp only supports up to 30 individual sounds'
 
         # define frequencies (log spaced from freq_0 to freq_1, rounded to nearest integer)
+        n_tones = self.task_params['n_freqs']
+        if self.task_params['include_white_noise']:
+            n_tones -= 1
         Session.frequencies = np.logspace(
             np.log10(self.task_params['freq_0']),
             np.log10(self.task_params['freq_1']),
-            num=self.task_params['n_freqs'],
+            num=n_tones,
         )
         Session.frequencies = np.round(self.frequencies).astype(int)
+        if self.task_params['include_white_noise']:
+            Session.frequencies = np.insert(Session.frequencies, 0, -1, axis=0)
 
         # get LUT (or create new one based on frequencies)
         attenuation_file = self.get_task_directory().joinpath('attenuation.csv')
@@ -123,7 +128,11 @@ class Session(BpodMixin, BaseSession):
     @staticmethod
     def get_state_name(state_idx: int):
         if state_idx < len(Session.sequence):
-            return f'{state_idx + 1:03d}_{Session.frequencies[Session.sequence[state_idx]]}'
+            frequency = Session.frequencies[Session.sequence[state_idx]]
+            if frequency >= 0:
+                return f'{state_idx + 1:03d}_{Session.frequencies[Session.sequence[state_idx]]}'
+            else:
+                return f'{state_idx + 1:03d}_white_noise'
         else:
             return 'exit'
 
@@ -134,7 +143,10 @@ class Session(BpodMixin, BaseSession):
         frequency_index = Session.sequence[state_index]
         frequency = Session.frequencies[frequency_index]
         n_states = len(Session.sequence)
-        log.info(f'- {state_index + 1:03d}/{n_states}: {frequency:5d} Hz')
+        if frequency >= 0:
+            log.info(f'- {state_index + 1:03d}/{n_states}: {frequency:5d} Hz')
+        else:
+            log.info(f'- {state_index + 1:03d}/{n_states}: white noise')
 
     def get_state_machine(self, trial_number: int) -> StateMachine:
         # generate sequence, optionally shuffled (seeded with trial number)
