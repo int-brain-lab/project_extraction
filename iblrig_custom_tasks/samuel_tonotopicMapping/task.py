@@ -18,13 +18,14 @@ class TonotopicMappingTrialData(TrialDataModel):
     """Pydantic Model for Trial Data."""
 
     frequency_sequence: list[int]
+    level_sequence: list[int]
 
 
 class Session(BpodMixin, BaseSession):
     protocol_name = 'samuel_tonotopicMapping'
     TrialDataModel = TonotopicMappingTrialData
 
-    frequencies: np.ndarray = np.array([])
+    parameters: np.ndarray = np.array([[], []])
     sequence: np.ndarray = np.array([])
     trial_num: int = -1
 
@@ -33,45 +34,33 @@ class Session(BpodMixin, BaseSession):
         self.trials_table = self.TrialDataModel.preallocate_dataframe(NTRIALS_INIT)
 
         assert self.hardware_settings.device_sound.OUTPUT == 'harp', 'This task requires a Harp sound-card'
-        assert self.task_params['n_freqs'] <= 30, 'Harp only supports up to 30 individual sounds'
+        assert self.task_params['n_freqs'] * len(self.task_params['levels']) <= 30, 'Harp only supports up to 30 waveforms'
 
         # define frequencies (log spaced from freq_0 to freq_1, rounded to nearest integer)
-        n_tones = self.task_params['n_freqs']
-        if self.task_params['include_white_noise']:
-            n_tones -= 1
-        Session.frequencies = np.logspace(
+        frequencies = np.logspace(
             np.log10(self.task_params['freq_0']),
             np.log10(self.task_params['freq_1']),
-            num=n_tones,
+            num=self.task_params['n_freqs'] - self.task_params['include_white_noise'],
         )
-        Session.frequencies = np.round(self.frequencies).astype(int)
+        frequencies = np.round(frequencies).astype(int)
         if self.task_params['include_white_noise']:
-            Session.frequencies = np.insert(Session.frequencies, 0, -1, axis=0)
+            frequencies = np.insert(frequencies, 0, -1, axis=0)
+
+        # get all parameter combinations
+        Session.parameters = np.array(np.meshgrid(frequencies, self.task_params['levels'])).T.reshape(-1, 2)
 
         # get LUT (or create new one based on frequencies)
         attenuation_file = self.get_task_directory().joinpath('attenuation.csv')
         if attenuation_file.exists():
             self.attenuation_lut = pd.read_csv(self.get_task_directory().joinpath('attenuation.csv'))
         else:
-            self.attenuation_lut = pd.DataFrame(
-                {'frequency_hz': self.frequencies, 'attenuation_db': np.zeros(self.n_frequencies)}
-            )
+            self.attenuation_lut = pd.DataFrame({'frequency_hz': frequencies, 'attenuation_db': np.zeros(len(frequencies))})
             self.attenuation_lut.to_csv(attenuation_file, index=False)
-
-        # get attenuation values from LUT (linear interpolation for missing values)
-        if self.task_params['skip_attenuation']:
-            self.attenuation = pd.DataFrame({'frequency_hz': self.frequencies, 'attenuation_db': np.zeros(self.n_frequencies)})
-        else:
-            self.attenuation = np.interp(
-                self.frequencies,
-                self.attenuation_lut['frequency_hz'],
-                self.attenuation_lut['attenuation_db'],
-            )
 
         # calculate repetitions per state machine run (255 states max)
         self.repetitions = []
-        max_reps_per_trial = 255 // self.n_frequencies
-        reps_remaining = self.task_params['n_reps_per_freq']
+        max_reps_per_trial = 255 // self.n_stimuli
+        reps_remaining = self.task_params['n_reps_per_stim']
         while reps_remaining > 0:
             self.repetitions.append(min(max_reps_per_trial, reps_remaining))
             reps_remaining -= self.repetitions[-1]
@@ -87,37 +76,43 @@ class Session(BpodMixin, BaseSession):
 
         # generate stimuli
         self.stimuli = []
-        for idx, f in enumerate(self.frequencies):
+        for stimulus_index in range(self.n_stimuli):
+            frequency = self.parameters[stimulus_index][0]
+            level = self.parameters[stimulus_index][1]
             tmp = sound.make_sound(
                 rate=self.task_params['fs'],
-                frequency=f,
+                frequency=frequency,
                 duration=self.task_params['d_sound'],
                 amplitude=self.task_params['amplitude'],
                 fade=self.task_params['d_ramp'],
                 chans=channels,
-                gain_db=self.attenuation[idx],
+                gain_db=self.get_corrective_gain(frequency) + level,
             )
             self.stimuli.append(tmp)
-        self.indices = [i for i in range(2, len(self.stimuli) + 2)]
+        self.harp_indices = [i for i in range(2, self.n_stimuli + 2)]
 
     @property
-    def n_frequencies(self):
-        return len(self.frequencies)
+    def n_stimuli(self):
+        return self.parameters.shape[0]
 
     @property
     def n_trials(self):
         return len(self.repetitions)
 
+    def get_corrective_gain(self, frequency: int):
+        """get corrective gain values from LUT"""
+        return np.interp(frequency, self.attenuation_lut['frequency_hz'], self.attenuation_lut['attenuation_db'])
+
     def start_mixin_sound(self):
-        log.info(f'Pushing {len(self.frequencies)} stimuli to Harp soundcard')
-        sound.configure_sound_card(sounds=self.stimuli, indexes=self.indices, sample_rate=self.task_params['fs'])
+        log.info(f'Pushing {len(self.parameters)} stimuli to Harp soundcard')
+        sound.configure_sound_card(sounds=self.stimuli, indexes=self.harp_indices, sample_rate=self.task_params['fs'])
 
         module = self.bpod.sound_card
         module_port = f'Serial{module.serial_port if module is not None else "3"}'
-        for frequency_idx, harp_idx in enumerate(self.indices):
+        for stimulus_idx, harp_idx in enumerate(self.harp_indices):
             bpod_message = [ord('P'), harp_idx]
             bpod_action = (module_port, self.bpod._define_message(self.bpod.sound_card, bpod_message))
-            self.bpod.actions.update({f'freq_{frequency_idx}': bpod_action})
+            self.bpod.actions.update({f'stim_{stimulus_idx}': bpod_action})
 
         self.bpod.softcode_handler_function = self.softcode_handler
 
@@ -128,11 +123,10 @@ class Session(BpodMixin, BaseSession):
     @staticmethod
     def get_state_name(state_idx: int):
         if state_idx < len(Session.sequence):
-            frequency = Session.frequencies[Session.sequence[state_idx]]
-            if frequency >= 0:
-                return f'{state_idx + 1:03d}_{Session.frequencies[Session.sequence[state_idx]]}'
-            else:
-                return f'{state_idx + 1:03d}_white_noise'
+            stimulus_idx = Session.sequence[state_idx]
+            frequency = Session.parameters[stimulus_idx][0]
+            gain = Session.parameters[stimulus_idx][1]
+            return '{:03d}_{:s}_{:d}dB'.format(state_idx, f'{frequency:d}Hz' if frequency >= 0 else 'WN', gain)
         else:
             return 'exit'
 
@@ -140,28 +134,29 @@ class Session(BpodMixin, BaseSession):
     def softcode_handler(softcode: int) -> None:
         """log some information about the current state"""
         state_index = softcode - 1
-        frequency_index = Session.sequence[state_index]
-        frequency = Session.frequencies[frequency_index]
+        stimulus_index = Session.sequence[state_index]
+        frequency = Session.parameters[stimulus_index][0]
+        gain = Session.parameters[stimulus_index][1]
         n_states = len(Session.sequence)
         if frequency >= 0:
-            log.info(f'- {state_index + 1:03d}/{n_states}: {frequency:5d} Hz')
+            log.info(f'- {state_index + 1:03d}/{n_states:03d}: {frequency:8d} Hz, {gain:3d} dB')
         else:
-            log.info(f'- {state_index + 1:03d}/{n_states}: white noise')
+            log.info(f'- {state_index + 1:03d}/{n_states:03d}: white noise, {gain:3d} dB')
 
     def get_state_machine(self, trial_number: int) -> StateMachine:
         # generate sequence, optionally shuffled (seeded with trial number)
-        Session.sequence = np.repeat(np.arange(len(self.frequencies)), self.repetitions[trial_number])
+        Session.sequence = np.repeat(np.arange(self.n_stimuli), self.repetitions[trial_number])
         if self.task_params['shuffle']:
             np.random.seed(trial_number)
             np.random.shuffle(Session.sequence)
 
         # build state machine
         sma = StateMachine(self.bpod)
-        for state_idx, frequency_idx in enumerate(self.sequence):
+        for state_idx, stimulus_idx in enumerate(self.sequence):
             sma.add_state(
                 state_name=self.get_state_name(state_idx),
                 state_timer=self.task_params['d_sound'] + self.task_params['d_pause'],
-                output_actions=[self.bpod.actions[f'freq_{frequency_idx}'], ('SoftCode', state_idx + 1)],
+                output_actions=[self.bpod.actions[f'stim_{stimulus_idx}'], ('SoftCode', state_idx + 1)],
                 state_change_conditions={'Tup': self.get_state_name(state_idx + 1)},
             )
         return sma
@@ -188,7 +183,8 @@ class Session(BpodMixin, BaseSession):
                     log.info('Resuming session')
 
             # save trial data
-            self.trials_table.at[self.trial_num, 'frequency_sequence'] = self.frequencies[self.sequence]
+            self.trials_table.at[self.trial_num, 'frequency_sequence'] = self.parameters[self.sequence, 0]
+            self.trials_table.at[self.trial_num, 'level_sequence'] = self.parameters[self.sequence, 1]
             bpod_data = self.bpod.session.current_trial.export()
             self.save_trial_data_to_json(bpod_data)
 
