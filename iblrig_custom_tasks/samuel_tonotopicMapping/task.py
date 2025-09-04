@@ -3,12 +3,14 @@ import time
 
 import numpy as np
 import pandas as pd
+from pydantic import FilePath, validate_call
 
 from iblrig import sound
 from iblrig.base_choice_world import NTRIALS_INIT
 from iblrig.base_tasks import BaseSession, BpodMixin
 from iblrig.misc import get_task_arguments
 from iblrig.pydantic_definitions import TrialDataModel
+from iblrig.raw_data_loaders import bpod_session_data_to_dataframe, load_task_jsonable
 from pybpodapi.state_machine import StateMachine
 
 log = logging.getLogger('iblrig')
@@ -192,6 +194,32 @@ class Session(BpodMixin, BaseSession):
             if self.stopped:
                 log.info('Stopping session after trial #%d', trial_number)
                 break
+
+
+@validate_call
+def create_dataframe(jsonable_file: FilePath) -> pd.DataFrame:
+    """Extract pandas DataFrame with relevant data from _iblrig_taskData.raw.jsonable file."""
+
+    # check argument
+    if jsonable_file.name != '_iblrig_taskData.raw.jsonable':
+        raise ValueError('Input file must be named `_iblrig_taskData.raw.jsonable`')
+
+    # load data
+    bpod_dicts = load_task_jsonable(jsonable_file)[1]
+    bpod_data = bpod_session_data_to_dataframe(bpod_dicts)
+
+    # remove frame2ttl data
+    output = bpod_data[bpod_data['Channel'].eq('BNC2')].copy()
+    if len(output) == 0:
+        raise ValueError('No audio TTLs found in the provided file')
+
+    # extract stimulus parameters from state names
+    output[['Stimulus', 'Frequency', 'Attenuation']] = output['State'].str.extract(r'^(\d+)_(\d+|WN)[^-\d]+([-\d]+)dB$')
+    output.replace({'Frequency': 'WN'}, '-1', inplace=True)
+    output[['Stimulus', 'Frequency', 'Attenuation']] = output[['Stimulus', 'Frequency', 'Attenuation']].astype('Int64')
+
+    # remove / reorder columns
+    return output[['Trial', 'Stimulus', 'Value', 'Frequency', 'Attenuation']]
 
 
 if __name__ == '__main__':
