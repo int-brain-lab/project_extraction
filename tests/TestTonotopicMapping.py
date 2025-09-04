@@ -1,3 +1,4 @@
+import json
 import shutil
 import tempfile
 import unittest
@@ -30,6 +31,25 @@ class TestCreateDataframe(unittest.TestCase):
         """Test that a non-existent file raises a ValidationError."""
         with self.assertRaises(ValidationError):
             task.create_dataframe('non_existent_file.jsonable')
+
+    def test_no_ttls(self):
+        """Test that a file with no TTLs raises a ValueError."""
+        temp_dir = tempfile.TemporaryDirectory()
+        jsonable = Path(temp_dir.name) / '_iblrig_taskData.raw.jsonable'
+        jsonable.touch()
+
+        with self.jsonable.open('r') as f0, jsonable.open('w') as f1:
+            for line_in in f0:
+                data = json.loads(line_in)
+                data['behavior_data']['Events timestamps'].pop('BNC2High')
+                data['behavior_data']['Events timestamps'].pop('BNC2Low')
+                line_out = json.dumps(data) + '\n'
+                f1.write(line_out)
+
+        with self.assertRaises(ValueError):
+            task.create_dataframe(jsonable)
+
+        temp_dir.cleanup()
 
     def test_wrong_file_name(self):
         """Test that a file with the wrong name raises a ValueError."""
