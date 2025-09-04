@@ -53,6 +53,13 @@ class TestCreateDataframe(unittest.TestCase):
         """Test that the DataFrame does not contain NaN values."""
         self.assertTrue(all(~self.dataframe.isna().any()))
 
+    def test_duration(self):
+        """Test that the fixture pulses is 150ms."""
+        t0 = self.dataframe[self.dataframe['Value'] == 0].index
+        t1 = self.dataframe[self.dataframe['Value'] == 1].index
+        durations = pd.arrays.TimedeltaArray(t0 - t1)
+        np.testing.assert_allclose(durations.microseconds / 1e3, 150, atol=0.11)
+
 
 if __name__ == '__main__':
     unittest.main()
