@@ -43,7 +43,7 @@ class TonotopicMappingTimeline(TonotopicMappingBpod):
     @property
     def signature(self):
         signature = super().signature
-        signature['output_files'].append(('tonotopic.timeline.pqt', self.output_collection, True))
+        signature['output_files'] = [('tonotopic.timeline.pqt', self.output_collection, True)]
         return signature
 
     def extract_behaviour(self, save=True):
