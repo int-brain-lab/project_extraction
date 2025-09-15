@@ -10,7 +10,8 @@ from iblrig.base_choice_world import NTRIALS_INIT
 from iblrig.base_tasks import BaseSession, BpodMixin
 from iblrig.misc import get_task_arguments
 from iblrig.pydantic_definitions import TrialDataModel
-from iblrig.raw_data_loaders import bpod_session_data_to_dataframe, load_task_jsonable
+from iblrig.raw_data_loaders import bpod_session_data_to_dataframe
+from iblutil.io import jsonable
 from pybpodapi.state_machine import StateMachine
 
 log = logging.getLogger('iblrig')
@@ -198,14 +199,44 @@ class Session(BpodMixin, BaseSession):
 
 @validate_call
 def create_dataframe(jsonable_file: FilePath) -> pd.DataFrame:
-    """Extract pandas DataFrame with relevant data from _iblrig_taskData.raw.jsonable file."""
+    """
+    Extract pandas DataFrame with relevant data from _iblrig_taskData.raw.jsonable file.
+
+    Parameters
+    ----------
+    jsonable_file : str, os.PathLike
+        Path to a session's `_iblrig_taskData.raw.jsonable` file.
+
+    Returns
+    -------
+    pd.DataFrame
+        A Pandas DataFrame containing event data from the specified trials, with the following columns:
+
+        *  Time : datetime.timedelta
+              timestamp of the event (datetime.timedelta)
+        *  Trial : int
+              index of the trial, zero-based
+        *  Stimulus : int
+              index of the stimulus, zero-based
+        *  Value : int
+              value of the event: 1 for onset of waveform, 0 for offset
+        *  Frequency : int
+              frequency of the stimulus in Hz
+        *  Attenuation : int
+              attenuation of the stimulus in dB
+
+    Raises
+    ------
+    ValueError
+        If the input file is not named `_iblrig_taskData.raw.jsonable` or if it doesn't contain audio TTLs.
+    """
 
     # check argument
     if jsonable_file.name != '_iblrig_taskData.raw.jsonable':
         raise ValueError('Input file must be named `_iblrig_taskData.raw.jsonable`')
 
     # load data
-    bpod_dicts = load_task_jsonable(jsonable_file)[1]
+    bpod_dicts = jsonable.load_task_jsonable(jsonable_file)[1]
     bpod_data = bpod_session_data_to_dataframe(bpod_dicts)
 
     # remove frame2ttl data
