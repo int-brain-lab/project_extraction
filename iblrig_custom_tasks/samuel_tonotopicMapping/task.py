@@ -238,7 +238,7 @@ def create_dataframe(jsonable_file: FilePath) -> pd.DataFrame:
     bpod_dicts = jsonable.load_task_jsonable(jsonable_file)[1]
     bpod_data = bpod_session_data_to_dataframe(bpod_dicts)
 
-    # remove frame2ttl data
+    # restrict to audio TTL events
     output = bpod_data[bpod_data['Channel'].eq('BNC2')].copy()
     if len(output) == 0:
         raise ValueError('No audio TTLs found in the provided file')
