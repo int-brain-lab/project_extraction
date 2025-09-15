@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Literal, overload
 
-from pandas import DataFrame
+import pandas as pd
 
 from ibllib.pipes.base_tasks import BehaviourTask
 from iblrig_custom_tasks.samuel_tonotopicMapping.task import create_dataframe
@@ -18,12 +18,12 @@ class TonotopicMappingBpod(BehaviourTask):
         return signature
 
     @overload
-    def extract_behaviour(self, save: bool = Literal[True]) -> tuple[DataFrame, list[Path]]: ...
+    def extract_behaviour(self, save: bool = Literal[True]) -> tuple[pd.DataFrame, list[Path]]: ...
 
     @overload
-    def extract_behaviour(self, save: bool = Literal[False]) -> tuple[DataFrame, None]: ...
+    def extract_behaviour(self, save: bool = Literal[False]) -> tuple[pd.DataFrame, None]: ...
 
-    def extract_behaviour(self, save: bool = True) -> tuple[DataFrame, list[Path] | None]:
+    def extract_behaviour(self, save: bool = True) -> tuple[pd.DataFrame, list[Path] | None]:
         filename_in = self.session_path.joinpath(self.collection, '_iblrig_taskData.raw.jsonable').absolute()
         filename_out = None
         data = create_dataframe(filename_in)
@@ -47,5 +47,12 @@ class TonotopicMappingTimeline(TonotopicMappingBpod):
         return signature
 
     def extract_behaviour(self, save=True):
-        # TODO: implementation
-        pass
+        bpod_data, _ = super().extract_behaviour(save=False)
+        filename_out = None
+
+        timeline_data = bpod_data  # TODO: implementation
+
+        if save:
+            filename_out = self.session_path.joinpath(self.output_collection, 'tonotopic.timeline.pqt')
+            timeline_data.to_parquet(filename_out)
+        return timeline_data, [filename_out]
