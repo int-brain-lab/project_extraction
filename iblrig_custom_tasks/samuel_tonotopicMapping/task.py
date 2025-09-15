@@ -1,5 +1,7 @@
 import logging
 import time
+from pathlib import Path
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -195,6 +197,14 @@ class Session(BpodMixin, BaseSession):
             if self.stopped:
                 log.info('Stopping session after trial #%d', trial_number)
                 break
+
+        # convert data to parquet and remove jsonable file
+        path_jsonable = cast(Path, self.paths['DATA_FILE_PATH'])
+        path_parquet = path_jsonable.with_suffix('.pqt')
+        data = create_dataframe(path_jsonable)
+        data.to_parquet(path_parquet)
+        assert path_parquet.exists()
+        path_jsonable.unlink()
 
 
 @validate_call
