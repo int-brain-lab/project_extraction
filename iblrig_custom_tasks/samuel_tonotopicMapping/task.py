@@ -210,20 +210,19 @@ def create_dataframe(jsonable_file: FilePath) -> pd.DataFrame:
     Returns
     -------
     pd.DataFrame
-        A Pandas DataFrame containing event data from the specified trials, with the following columns:
+        A Pandas DataFrame containing event data from the specified trials.
 
-        *  Time : datetime.timedelta
-              timestamp of the event (datetime.timedelta)
-        *  Trial : int
-              index of the trial, zero-based
-        *  Stimulus : int
-              index of the stimulus, zero-based
-        *  Value : int
-              value of the event: 1 for onset of waveform, 0 for offset
-        *  Frequency : int
-              frequency of the stimulus in Hz
-        *  Attenuation : int
-              attenuation of the stimulus in dB
+        Index:
+
+        *  Time: timestamp of the event (datetime.timedelta)
+
+        Columns:
+
+        *  Trial: index of the trial, zero-based
+        *  Stimulus: index of the stimulus, zero-based
+        *  Value: value of the event: 1 for onset of waveform, 0 for offset
+        *  Frequency: frequency of the stimulus in Hz
+        *  Attenuation: attenuation of the stimulus in dB
 
     Raises
     ------
