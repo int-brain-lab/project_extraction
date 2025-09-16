@@ -283,7 +283,6 @@ class Session(BpodMixin, BaseSession):
         data = create_dataframe(path_jsonable)
         data.to_parquet(path_parquet)
         assert path_parquet.exists()
-        path_jsonable.unlink()
 
 
 @validate_call
