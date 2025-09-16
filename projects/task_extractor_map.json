@@ -1,5 +1,6 @@
 {
   "samuel_cuedBiasedChoiceWorld": "BiasedTrials",
+  "samuel_tonotopicMapping": "projects.samuel_tonotopicMapping.TonotopicMappingTimeline",
   "_iblrig_tasks_neuromodulatorChoiceWorld": "projects.neuromodulators.TrialsTableNeuromodulator",
   "nate_optoBiasedChoiceWorld": "projects.nate_optoBiasedChoiceWorld.TrialsOpto",
   "max_optoStaticTrainingChoiceWorld": "projects.max_optoStaticTrainingChoiceWorld.TrialsOpto",
