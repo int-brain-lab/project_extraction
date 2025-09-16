@@ -167,9 +167,6 @@ class Session(BpodMixin, BaseSession):
         return sma
 
     def _run(self):
-        log.info('Sending spacers to BNC ports')
-        self.send_spacers()
-
         for trial_number in range(self.n_trials):
             self.trial_num = trial_number
 
