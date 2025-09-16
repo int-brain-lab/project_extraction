@@ -12,7 +12,7 @@ from ibllib.pipes.base_tasks import BehaviourTask
 from iblrig_custom_tasks.samuel_tonotopicMapping.task import create_dataframe
 from one.alf import io as alfio
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger('ibllib.' + __name__)
 
 
 class TonotopicMappingBpod(BehaviourTask):
@@ -33,12 +33,13 @@ class TonotopicMappingBpod(BehaviourTask):
 
     def extract_behaviour(self, save: bool = True) -> tuple[pd.DataFrame, list[Path] | None]:
         filename_in = self.session_path.joinpath(self.collection, '_iblrig_taskData.raw.jsonable').absolute()
-        filename_out = None
+        filename_out = []
         data = create_dataframe(filename_in)
         if save:
-            filename_out = self.session_path.joinpath(self.output_collection, '_sp_tonotopic.trials.pqt')
-            data.to_parquet(filename_out)
-        return data, [filename_out]
+            filename_out.append(self.session_path / self.output_files[0].glob_pattern)
+            filename_out[0].parent.mkdir(exist_ok=True, parents=True)
+            data.to_parquet(filename_out[0])
+        return data, filename_out
 
     def _run(self, overwrite: bool = False, save: bool = True) -> list[Path]:
         trials, output_files = self.extract_behaviour(save=save)
@@ -94,6 +95,10 @@ class TonotopicMappingTimeline(TonotopicMappingBpod):
         timeline_data.index = pd.to_timedelta(timeline_seconds, unit='s')
 
         # save to disk and return as tuple
+        filenames = []
         if save:
+            filenames.append(self.session_path / self.output_files[0].glob_pattern)
+            filenames[0].parent.mkdir(exist_ok=True, parents=True)
+            logger.info('Saving timeline data to %s', filenames[0])
             timeline_data.to_parquet(filenames[0])
         return timeline_data, filenames
