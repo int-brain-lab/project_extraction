@@ -85,6 +85,7 @@ class Session(BiasedChoiceWorldSession):
         mask_ttl_states: list[str] = DEFAULTS['MASK_TTL_STATES'],
         use_zapit: bool = DEFAULTS['USE_ZAPIT'],
         stim_reverse: float = DEFAULTS['STIM_REVERSE'],
+        reward_amount_ul: float = DEFAULTS['REWARD_AMOUNT_UL'],
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -94,6 +95,7 @@ class Session(BiasedChoiceWorldSession):
         self.task_params['MASK_TTL_STATES'] = mask_ttl_states
         self.task_params['PROBABILITY_OPTO_STIM'] = probability_opto_stim
         self.task_params['STIM_REVERSE'] = stim_reverse
+        self.task_params['REWARD_AMOUNT_UL'] = reward_amount_ul
         self.task_params['USE_ZAPIT'] = use_zapit
         self.current_location_idx = None
         self.num_cond = None
@@ -168,6 +170,14 @@ class Session(BiasedChoiceWorldSession):
             default=DEFAULTS['PROBABILITY_OPTO_STIM'],
             type=float,
             help=f'probability of opto-genetic stimulation (default: {DEFAULTS["PROBABILITY_OPTO_STIM"]})',
+        )
+        parser.add_argument(
+            '--reward_amount_ul',
+            option_strings=['--reward_amount_ul'],
+            dest='reward_amount_ul',
+            default=DEFAULTS['REWARD_AMOUNT_UL'],
+            type=float,
+            help=f'reward amount, ul (default: {DEFAULTS["REWARD_AMOUNT_UL"]})',
         )
         parser.add_argument(
             '--contrast_set_probability_type',
