@@ -103,7 +103,7 @@ class TonotopicMappingBpod(BehaviourTask):
     def signature(self):
         signature = super().signature
         signature['input_files'] = [
-            ('_iblrig_taskData.raw.pqt', self.collection, True, True),
+            ('_iblrig_taskData.raw.jsonable', self.collection, True, True),
             ('_iblrig_taskSettings.raw.json', self.collection, True, True),
         ]
         signature['output_files'] = [('_sp_tonotopic.trials.pqt', self.output_collection, True)]
