@@ -328,6 +328,7 @@ def create_dataframe(jsonable_file: FilePath) -> pd.DataFrame:
     output[['Stimulus', 'Frequency', 'Attenuation']] = output['State'].str.extract(r'^(\d+)_(\d+|WN)[^-\d]+([-\d]+)dB$')
     output.replace({'Frequency': 'WN'}, '-1', inplace=True)
     output[['Stimulus', 'Frequency', 'Attenuation']] = output[['Stimulus', 'Frequency', 'Attenuation']].astype('Int64')
+    output.index.name = 'Nanoseconds'
 
     # remove / reorder columns
     return output[['Trial', 'Stimulus', 'Value', 'Frequency', 'Attenuation']]
