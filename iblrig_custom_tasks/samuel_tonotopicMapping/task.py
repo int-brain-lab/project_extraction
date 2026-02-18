@@ -72,6 +72,7 @@ class Session(BpodMixin, BaseSession):
 
     protocol_name = 'samuel_tonotopicMapping'
     TrialDataModel = TonotopicMappingTrialData
+    extractor_tasks = ['TrialRegisterRaw']
 
     parameters: np.ndarray = np.array([[], []])
     sequence: np.ndarray = np.array([])

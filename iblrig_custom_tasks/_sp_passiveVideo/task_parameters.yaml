@@ -1,4 +1,4 @@
 POOP_COUNT: true
-VIDEO: C:\Users\User\Videos\SampleVideo_1280x720_2mb.mp4
+VIDEO: C:\Users\IBL\Videos\perlin-xyscale2-tscale50-comb08-30Hz-5min.mp4
 NREPEATS: 2  # Number of video repeats (currently === n trials)
 ITI_DELAY_SECS: 1
