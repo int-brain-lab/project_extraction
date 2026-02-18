@@ -41,7 +41,7 @@ with open(Path(__file__).parent.joinpath('task_parameters.yaml')) as f:
 
 class Session(StaticTrainingChoiceSession, PulsePalMixin):
     protocol_name = 'max_optoStaticTrainingChoiceWorld'
-    extractor_tasks = ['PulsePalTrials']
+    extractor_tasks = ['PulsePalTrialsBpod']
 
     def __init__(
         self,

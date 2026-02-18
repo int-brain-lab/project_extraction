@@ -1,0 +1,13 @@
+'freq_0': 2000  # lowest frequency to map (Hz)
+'freq_1': 16000  # highest frequency to map (Hz)
+'include_white_noise': true  # whether to include a white noise stimulus
+'n_freqs': 10  # number of frequencies to map (including white noise)
+'levels': [0, -6, -12]  # stimulus gain levels to test (dB)
+'n_reps_per_stim': 10  # total number of presentations for each stimulus (across trials)
+'d_pause': 0.01  # duration of silence inbetween sound pulses (s)
+'d_sound': 0.15  # duration of sound pulse (s)
+'d_ramp': 0.01  # duration of Hanning ramp (s)
+'amplitude': 0.05  # initial amplitude of all stimuli prior to dB attenuation
+'fs': 192000  # sampling rate (Hz) - Harp supports 96000 Hz and 192000 Hz
+'shuffle': true  # whether to shuffle the order of frequencies or not
+'skip_attenuation': false  # whether to skip gain correction (potentially useful for calibration)
